@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+backend/media/
+backend/staticfiles/*
+!backend/staticfiles/.gitkeep
+.pytest_cache/
+# Node
+node_modules/
+frontend/.next/
+frontend/tsconfig.tsbuildinfo
+# Secrets
+.env
