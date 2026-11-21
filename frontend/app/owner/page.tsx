@@ -4,7 +4,7 @@ import { Shell } from "@/components/Shell";
 import { CancelOrReport, DataTable, Disclosure, ErrorNote, Findings, Kpi, PageHead, Pill, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
-import { Me, useData } from "@/lib/session";
+import { Me, needsName, useData } from "@/lib/session";
 
 type ExamRow = { id: number; name: string; ordered_qty: number; price: number; created_at: string; printed: number | null; counted: number | null;
   in_store: number; with_sales: number; sold: number; collected: number; debt: number; status: string };
@@ -36,7 +36,10 @@ function OverviewScreen({ me }: { me: Me }) {
   return (
     <>
       <ErrorNote error={ov.error} />
-      <PageHead title={`${greeting()}, ${me.name.split(" ")[0]}`}
+      {needsName(me) && (
+        <div className="banner info row"><span className="grow">Add your name so it shows here and on everything you record.</span><Link href="/account">Add my name</Link></div>
+      )}
+      <PageHead title={needsName(me) ? greeting() : `${greeting()}, ${me.first_name}`}
         sub={!d ? "Loading your figures…" : serious ? `${serious} serious warning${serious > 1 ? "s need" : " needs"} your attention.` : "Everything adds up. No serious warnings."} />
 
       <div className="kpis">

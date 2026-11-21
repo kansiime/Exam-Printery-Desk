@@ -20,5 +20,7 @@ class Command(BaseCommand):
         if User.objects.filter(username=username).exists():
             self.stdout.write(f"Owner {username} already exists.")
             return
-        User.objects.create_superuser(username=username, password=password, role=User.Role.OWNER, first_name="Owner")
+        User.objects.create_superuser(username=username, password=password, role=User.Role.OWNER,
+                                      first_name=os.environ.get("OWNER_FIRST_NAME", "").strip(),
+                                      last_name=os.environ.get("OWNER_LAST_NAME", "").strip())
         self.stdout.write(f"Created owner {username}.")

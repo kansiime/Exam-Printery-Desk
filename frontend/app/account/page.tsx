@@ -3,7 +3,7 @@ import { Shell } from "@/components/Shell";
 import { PageHead, useAction, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
-import { Me } from "@/lib/session";
+import { Me, useSession } from "@/lib/session";
 
 export default function AccountPage() {
   return <Shell allow={["owner", "printer", "store", "sales"]}>{(me) => <Account me={me} />}</Shell>;
@@ -15,6 +15,7 @@ function Account({ me }: { me: Me }) {
   return (
     <>
       <PageHead title="My account" sub={`${me.name} · ${ROLE_LABEL[me.role]} · username ${me.username}`} />
+      <Details me={me} />
       <section className="panel">
         <div><h2>Change password</h2><p className="sub">Choose something only you know, at least 8 characters. Other phones signed in to your account will be signed out.</p></div>
         <form onSubmit={async (e) => {
@@ -32,5 +33,27 @@ function Account({ me }: { me: Me }) {
         </form>
       </section>
     </>
+  );
+}
+
+function Details({ me }: { me: Me }) {
+  const { setMe } = useSession();
+  const { busy, run } = useAction();
+  return (
+    <section className="panel">
+      <div><h2>Your details</h2><p className="sub">Your name shows at the top of the app and on everything you record. Your phone receives password reset codes.</p></div>
+      <form onSubmit={async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        await run(async () => setMe(await api<Me>("auth/me", { method: "PATCH", body: { first_name: f.get("first_name"), last_name: f.get("last_name"), phone: f.get("phone") } })), "Details saved");
+      }}>
+        <div className="grid3">
+          <label>First name<input name="first_name" required defaultValue={me.first_name.toLowerCase() === "owner" ? "" : me.first_name} placeholder="e.g. Noel" autoComplete="given-name" /></label>
+          <label>Last name<input name="last_name" defaultValue={me.last_name} autoComplete="family-name" /></label>
+          <label>Phone<input name="phone" type="tel" inputMode="tel" defaultValue={me.phone} placeholder="07…" autoComplete="tel" /></label>
+        </div>
+        <div><button disabled={busy}>Save details</button></div>
+      </form>
+    </section>
   );
 }

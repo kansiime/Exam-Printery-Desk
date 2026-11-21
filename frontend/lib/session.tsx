@@ -3,7 +3,10 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { OfflineError, api } from "./api";
 
-export type Me = { id: number; username: string; name: string; role: "owner" | "printer" | "store" | "sales"; business: string };
+export type Me = { id: number; username: string; name: string; first_name: string; last_name: string; phone: string; role: "owner" | "printer" | "store" | "sales"; business: string };
+
+/** True while someone still shows as a username or the old "Owner" placeholder. */
+export const needsName = (me: Me) => !me.first_name || me.first_name.toLowerCase() === "owner";
 
 const Ctx = createContext<{ me: Me | null; loading: boolean; refresh: () => Promise<void>; setMe: (m: Me | null) => void }>({
   me: null, loading: true, refresh: async () => {}, setMe: () => {},

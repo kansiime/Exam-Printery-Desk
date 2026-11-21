@@ -59,6 +59,10 @@ services:
         sync: false            # the owner's login name, created on the first deploy
       - key: OWNER_PASSWORD
         sync: false            # at least 8 characters; change it after first sign-in if you like
+      - key: OWNER_FIRST_NAME
+        sync: false            # the owner's first name, shown in the app (can be changed later under My account)
+      - key: OWNER_LAST_NAME
+        sync: false
 
   # Next.js phone app: the address everyone opens
   - type: web

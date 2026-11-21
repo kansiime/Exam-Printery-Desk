@@ -73,3 +73,11 @@ def test_change_password(musa):
     assert c.get("/api/auth/me/").status_code == 200  # still signed in on this phone
     musa.refresh_from_db()
     assert musa.check_password("brand-new-pass-9")
+
+
+def test_people_set_their_own_name_but_not_their_role(musa):
+    c = APIClient()
+    c.force_login(musa)
+    r = c.patch("/api/auth/me/", {"first_name": "Musa", "last_name": "Okello", "phone": "0700111222", "role": "owner"}, format="json")
+    assert r.status_code == 200 and r.data["name"] == "Musa Okello" and r.data["role"] == "sales"
+    assert c.patch("/api/auth/me/", {"first_name": "  "}, format="json").status_code == 400

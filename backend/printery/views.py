@@ -48,6 +48,7 @@ class LoginThrottle(ScopedRateThrottle):
 
 def me_payload(user):
     return {"id": user.id, "username": user.username, "name": user.display_name,
+            "first_name": user.first_name, "last_name": user.last_name, "phone": user.phone,
             "role": OWNER if user.is_superuser else user.role, "business": settings.BUSINESS_NAME}
 
 
@@ -75,9 +76,19 @@ def logout_view(request):
     return Response({"ok": True})
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 def me(request):
-    return Response(me_payload(request.user))
+    """GET: who is signed in. PATCH: change your own name and phone (not your role)."""
+    user = request.user
+    if request.method == "PATCH":
+        first = str(request.data.get("first_name", user.first_name)).strip()[:150]
+        if not first:
+            return Response({"first_name": "Enter your first name."}, status=400)
+        user.first_name = first
+        user.last_name = str(request.data.get("last_name", user.last_name)).strip()[:150]
+        user.phone = str(request.data.get("phone", user.phone)).strip()[:20]
+        user.save(update_fields=["first_name", "last_name", "phone"])
+    return Response(me_payload(user))
 
 
 # ---------- base ----------

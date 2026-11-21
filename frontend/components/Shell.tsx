@@ -94,7 +94,7 @@ function AccountMenu({ me, extra }: { me: Me; extra: Tab[] }) {
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, []);
-  const initials = me.name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+  const initials = ((me.first_name?.[0] ?? "") + (me.last_name?.[0] ?? "") || me.username[0]).toUpperCase();
   return (
     <div className="account" ref={ref}>
       <button type="button" className="avatar" aria-label="Account menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{initials}</button>
