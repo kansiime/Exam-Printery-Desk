@@ -59,6 +59,7 @@ api = [
     path("summary/store/", v.store_summary),
     path("summary/field/", v.field_summary),
     path("summary/debts/", v.debts),
+    path("debt-notes/", v.add_debt_note),
     path("summary/cash/", v.cash_summary),
     path("webhooks/momo/", v.momo_webhook),
     path("webhooks/sms/", v.sms_inbound),

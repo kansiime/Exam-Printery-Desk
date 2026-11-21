@@ -568,18 +568,69 @@ def debts(request):
         d = L.visit_debt(v)
         if d <= 0:
             continue
-        row = by_school.setdefault(v.school_id, {"school": v.school.name, "district": v.school.district, "contact": v.school.contact,
+        row = by_school.setdefault(v.school_id, {"id": v.school_id, "school": v.school.name, "district": v.school.district, "contact": v.school.contact,
                                                  "phone": v.school.phone, "total": 0, "visits": []})
         row["total"] += d
         age = (today - v.date).days
         row["visits"].append({"id": v.id, "exam": v.exam.name, "copies": v.copies, "price": v.price, "debt": d, "date": v.date,
                               "due": v.due, "overdue": bool(v.due and v.due < today), "age_days": age, "sales": L.name(v.sales_id)})
     rows = sorted(by_school.values(), key=lambda r: r["total"], reverse=True)
+    # Notes and promises, the date to chase, the ready-written WhatsApp reminder, and automatic reminders sent.
+    from .models import DebtNote, WhatsAppMessage
+    from .reminders import debtors
+    from .whatsapp import intl, reminder_text, whatsapp_enabled
+    chase = {r["school"].id: r for r in debtors(L, today)}
+    notes, sent = {}, {}
+    for n in DebtNote.objects.filter(school_id__in=by_school.keys()).select_related("created_by").order_by("-created_at"):
+        notes.setdefault(n.school_id, []).append({"id": n.id, "text": n.text, "promised_amount": n.promised_amount, "promised_date": n.promised_date,
+                                                  "by": n.created_by.display_name if n.created_by else "", "created_at": n.created_at})
+    for m in WhatsAppMessage.objects.filter(school_id__in=by_school.keys()).order_by("-created_at"):
+        sent.setdefault(m.school_id, []).append({"kind": m.kind, "status": m.status, "created_at": m.created_at})
+    for r in rows:
+        c = chase.get(r["id"], {})
+        due = c.get("due")
+        r["chase_date"] = due
+        r["overdue"] = bool(due and due < today)
+        r["broken_promise"] = c.get("broken", "")
+        r["notes"] = notes.get(r["id"], [])[:10]
+        r["whatsapp_sent"] = sent.get(r["id"], [])[:5]
+        r["wa_phone"] = intl(r["phone"])
+        r["reminder_text"] = reminder_text(r["school"], r["total"], due, bool(due and due < today))
     ageing = {"under_30": 0, "30_60": 0, "over_60": 0}
     for r in rows:
         for v in r["visits"]:
             ageing["under_30" if v["age_days"] < 30 else "30_60" if v["age_days"] <= 60 else "over_60"] += v["debt"]
-    return Response({"schools": rows, "total": sum(r["total"] for r in rows), "ageing": ageing})
+    return Response({"schools": rows, "total": sum(r["total"] for r in rows), "ageing": ageing, "auto_whatsapp": whatsapp_enabled()})
+
+
+@api_view(["POST"])
+@permission_classes([roles(OWNER, SALES)])
+def add_debt_note(request):
+    """Record what a debtor said, optionally a promise: amount and date."""
+    from datetime import datetime
+
+    from .models import DebtNote
+    school = School.objects.filter(pk=request.data.get("school")).first()
+    if not school:
+        return Response({"school": "Choose the school."}, status=400)
+    if role_of(request) == SALES and not Visit.objects.filter(school=school, sales=request.user).exists():
+        return Response({"detail": "You can only add notes for schools you sold to."}, status=403)
+    text = str(request.data.get("text", "")).strip()[:500]
+    if not text:
+        return Response({"text": "Write what the school said."}, status=400)
+    amount, date = request.data.get("promised_amount"), request.data.get("promised_date")
+    try:
+        amount = int(amount) if amount not in (None, "") else None
+        date = datetime.strptime(date, "%Y-%m-%d").date() if date else None
+    except (TypeError, ValueError):
+        return Response({"detail": "Check the promised amount and date."}, status=400)
+    if date and date < timezone.localdate():
+        return Response({"promised_date": "The promised date can't be in the past."}, status=400)
+    n = DebtNote.objects.create(school=school, text=text, promised_amount=amount, promised_date=date, created_by=request.user)
+    if date or amount:
+        N.tell_roles([OWNER], f"{school.name} promised to pay" + (f" UGX {amount:,}" if amount else "") + (f" by {date:%d %b}" if date else ""),
+                     f"“{text}” (noted by {request.user.display_name})", "/debts", exclude=request.user)
+    return Response({"id": n.id}, status=201)
 
 
 @api_view(["GET"])

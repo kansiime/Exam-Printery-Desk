@@ -172,6 +172,13 @@ OWNER_PHONE = env("OWNER_PHONE", "")
 SMS_WEBHOOK_TOKEN = env("SMS_WEBHOOK_TOKEN", "")
 MOMO_WEBHOOK_TOKEN = env("MOMO_WEBHOOK_TOKEN", "")
 
+# WhatsApp Business Cloud API for automatic debt reminders (optional; see printery/whatsapp.py)
+WHATSAPP_TOKEN = env("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_ID = env("WHATSAPP_PHONE_ID", "")
+WHATSAPP_TEMPLATE = env("WHATSAPP_TEMPLATE", "")
+WHATSAPP_TEMPLATE_LANG = env("WHATSAPP_TEMPLATE_LANG", "en")
+WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", "v21.0")
+
 # Phone alerts when the app is closed (Web Push). Make keys with: python manage.py generate_vapid_keys
 VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", "")

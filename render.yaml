@@ -28,6 +28,12 @@ envVarGroups:
         sync: false
       - key: OWNER_PHONE
         sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false            # optional: WhatsApp Business Cloud API token for automatic debt reminders
+      - key: WHATSAPP_PHONE_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE
+        sync: false
       - key: SMS_WEBHOOK_TOKEN
         generateValue: true
       - key: MOMO_WEBHOOK_TOKEN

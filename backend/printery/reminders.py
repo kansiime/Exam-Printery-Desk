@@ -13,9 +13,10 @@ from django.utils import timezone
 
 from accounts.models import User
 
-from .models import CashHandover, DayClose, Notification, OwnerHandover
+from .models import CashHandover, DayClose, DebtNote, Notification, OwnerHandover
 from .notify import OWNER, SALES, STORE, people, tell
 from .services import Ledger, ugx
+from .whatsapp import send_debt_reminder, whatsapp_enabled
 
 log = logging.getLogger(__name__)
 H = timedelta(hours=1)
@@ -31,6 +32,39 @@ DAY_CLOSE_HOUR, DAY_CLOSE_OWNER_HOUR = 19, 21  # Kampala time
 
 def hours(td):
     return int(td.total_seconds() // 3600)
+
+
+def debtors(L, today):
+    """Schools that owe money, with the date to chase (latest promise, else earliest due date)."""
+    by_school = {}
+    for v in L.visits:
+        d = L.visit_debt(v)
+        if d <= 0:
+            continue
+        row = by_school.setdefault(v.school_id, {"school": v.school, "owed": 0, "dues": [], "seller_ids": set()})
+        row["owed"] += d
+        row["seller_ids"].add(v.sales_id)
+        if v.due:
+            row["dues"].append(v.due)
+    notes = {}
+    for n in DebtNote.objects.filter(school_id__in=by_school.keys()).order_by("created_at"):
+        notes.setdefault(n.school_id, []).append(n)
+    out = []
+    for sid, row in by_school.items():
+        promises = [n for n in notes.get(sid, []) if n.promised_date]
+        latest = promises[-1] if promises else None
+        due = latest.promised_date if latest else (min(row["dues"]) if row["dues"] else None)
+        broken, broken_id = "", None
+        if latest and latest.promised_date < today and latest.promised_amount:
+            school_visits = {v.id for v in L.visits if v.school_id == sid}
+            paid_since = sum(p.amount for p in L.payments if p.visit_id in school_visits and p.created_at >= latest.created_at)
+            if paid_since < latest.promised_amount:
+                broken = (f"Promised UGX {latest.promised_amount:,} by {latest.promised_date:%d %b} (noted by {L.name(latest.created_by_id)}); "
+                          f"paid UGX {paid_since:,} since. Still owes {ugx(row['owed'])}.")
+                broken_id = latest.id
+        out.append({"school": row["school"], "owed": row["owed"], "due": due, "promise": latest, "broken": broken, "broken_id": broken_id,
+                    "sellers": [L.users[i] for i in row["seller_ids"] if i in L.users]})
+    return out
 
 
 def run_reminders(now=None):
@@ -110,14 +144,25 @@ def run_reminders(now=None):
             send([k] + owners, f"{k.display_name} is holding {ugx(held)} store cash",
                  f"Nothing handed to the owner for {hours(now - since) // 24} days.", "/cash", URGENT, f"rem:storecash:{k.id}:{today}")
 
-    # 5. Promised payment date passed (reminded again each week)
+    # 5. Debts: follow the school's latest promise (or the sale's due date). WhatsApp the school
+    #    2 days before, when it is missed, then weekly; tell the sales person and owner.
     week = today.strftime("%G-%V")
-    for v in L.visits:
-        debt = L.visit_debt(v)
-        if v.due and v.due < today and debt > 0:
-            send([L.users[v.sales_id]] + owners, f"{v.school.name} owes {ugx(debt)}: payment overdue",
-                 f"They promised to pay by {v.due:%d %b}. {v.school.contact} {v.school.phone}".strip(), "/debts", ACTION,
-                 f"rem:due:{v.id}:{week}")
+    for row in debtors(L, today):
+        school, owed, due, sellers = row["school"], row["owed"], row["due"], row["sellers"]
+        if not due:
+            continue
+        if 0 <= (due - today).days <= 2:
+            send_debt_reminder(school, owed, due, "before_due", key=f"wa:{school.id}:before:{due}")
+            send(sellers, f"{school.name}: UGX {owed:,} due {due:%d %b}",
+                 "A friendly reminder " + ("was sent to the school on WhatsApp." if whatsapp_enabled() and school.phone else "is ready: tap “Remind on WhatsApp” on Debts."),
+                 "/debts", ACTION, f"rem:due-soon:{school.id}:{due}")
+        elif due < today:
+            send_debt_reminder(school, owed, due, "overdue" if (today - due).days < 7 else "weekly", key=f"wa:{school.id}:overdue:{due}:{week}")
+            send(sellers + owners, f"{school.name} owes {ugx(owed)}: payment overdue",
+                 f"Promised by {due:%d %b}. {school.contact} {school.phone}".strip() + (" WhatsApp reminder sent." if whatsapp_enabled() and school.phone else ""),
+                 "/debts", ACTION, f"rem:due:{school.id}:{due}:{week}")
+        if row["broken"]:
+            send(sellers + owners, f"{school.name} broke its promise to pay", row["broken"], "/debts", URGENT, f"rem:broken:{row['broken_id']}")
 
     # 6. End-of-day close not done
     if local.hour >= DAY_CLOSE_HOUR:

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/icons";
 import { api } from "@/lib/api";
-import { useT } from "@/lib/i18n";
+import { Lang, useT } from "@/lib/i18n";
 import { HOME, Me, useSession } from "@/lib/session";
 
 export default function Login() {
@@ -40,7 +40,8 @@ export default function Login() {
         <label>{t("Username")}<input id="username" autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
         <label>{t("Password")}<input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <button disabled={busy}>{busy ? "…" : t("Sign in")}</button>
-        <p className="mini" style={{ textAlign: "center", margin: 0 }}><Link href="/forgot">{t("Forgot your password?")}</Link> · <button type="button" className="plain" style={{ display: "inline", minHeight: 0, padding: 0, color: "var(--accent)", fontSize: "inherit" }} onClick={() => setLang(lang === "lg" ? "en" : "lg")}>{lang === "lg" ? "English" : "Luganda"}</button></p>
+        <p className="mini" style={{ textAlign: "center", margin: 0 }}><Link href="/forgot">{t("Forgot your password?")}</Link> · <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as Lang)} style={{ display: "inline", width: "auto", minHeight: 0, padding: "2px 6px", fontSize: ".85rem" }}>
+          <option value="en">English</option><option value="lg">Luganda</option><option value="nyn">Runyankore</option></select></p>
       </form>
     </div>
   );

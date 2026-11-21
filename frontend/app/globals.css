@@ -317,3 +317,4 @@ label.check input { width: 20px; height: 20px; min-height: 0; margin-top: 2px; f
   .tablewrap.cards td::before { content: none !important; }
 }
 @media print { .disclosure { display: none !important; } }
+a.ghostlink { display: inline-flex; align-items: center; min-height: 38px; padding: 7px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--accent); font-weight: 600; font-size: .88rem; text-decoration: none; }

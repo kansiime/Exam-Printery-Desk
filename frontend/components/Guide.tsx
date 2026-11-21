@@ -52,13 +52,42 @@ const STEPS: Record<Me["role"], Step[]> = {
   ],
 };
 
+// Runyankore guides (draft: please have a fluent speaker check).
+const NYN: Record<Me["role"], [string, string][]> = {
+  owner: [
+    ["Ohereze ebiragiro by'okucapa", "Aha Okureeba byona, iguraho “New print order” eishomero ku ryamara ebigyezo. Abacapa nibamanyisibwa ahonaaho."],
+    ["Reeba akagambo k'obutumwa", "Buri kintu nikikuhikaho n'eiraka rihango: omubaro gw'ekyuma, ebishushani, okubara, okuguza, sente. Siren etukura neemanyisa obwiibi."],
+    ["Shwijuma obwiibi", "Okushwijuma obwiibi nikugyeragyeranisa ekyuma ky'okucapa, okubara kwa sitoo, enamba, mobile money na GPS. Teera esimu amashomero ga wiiki egi kuruga aho."],
+    ["Teeramu abakozi", "Aha Abakozi, kora buri mukozi eiziina ry'okutaaha, omuhe omurimo gwe. Teeraho na commission y'abaguzi."],
+    ["Reeba sente", "Lipooti neeyoreka amagoba, commission ya buri muguzi, amashomero agakira n'abashashura mpora. Gyeihe omuri Excel."],
+  ],
+  printer: [
+    ["Ebiragiro ebisya nibiteera", "Nyin'omurimo yaaherereza ekiragiro ky'okucapa, esimu yaawe neeteera kandi kikareebeka aha Okucapa ebigyezo."],
+    ["Entambwe 1: Tandika okucapa", "Shoma omubaro aha kyuma ky'okucapa, ogwandiike, okwate ekishushani ky'omubaro. Reero kanda “Tandika okucapa”."],
+    ["Entambwe 2: Teeraho omubaro", "Waamara okucapa: kopi nungi, empapura ezaashiisikire, omubaro gw'ekyuma bwanyima, n'ekishushani. Kanda “Teeraho omubaro gw'ebicapirwe, obyohereze omu sitoo”."],
+    ["N'okucapa okundi", "Handiika buri murimo ogundi aha kyuma ahansi ya “Other printing”, nikwo nyin'omurimo atareeba empapura ezitarikuhandiikwa."],
+  ],
+  store: [
+    ["Kunja obare", "Ebigyezo ebicapirwe nibireebeka ahansi ya “Fold and count”. Bara kopi wenka, ohandiike omubaro n'enamba."],
+    ["Ha kopi", "Ha omuguzi kopi, ohandiike zingahi n'enamba ki. Nibazakira aha simu yaabo."],
+    ["Ebigarukire na sente", "Handiika kopi ezitaguzirwe ezigarukire, na sente ezakuhairwe. Reero ha nyin'omurimo sente aha Sente."],
+    ["Hamya okukinga eizooba", "Buri kyeggyezi, shwijuma okukinga eizooba kwa buri muguzi, okande “It matches” nari “Doesn't match”."],
+  ],
+  sales: [
+    ["Yakira kopi zaawe", "Sitoo yaakuha kopi, zibare, okande “I received”. Omubaro gwaaba gutari gwo, banza ogambire omurinzi wa sitoo."],
+    ["Handiika buri ishomero", "Toorana eishomero, kopi, bbeeyi, sente ezishashuirwe, enamba ya delivery note, n'ekishushani kya note eteiretwaho omukono. N'ahu oriho nihabikwa."],
+    ["Tihariho network? Komeza", "Engyendo nizibikwa aha simu yaawe, zikeyohereza zonka network yagaruka."],
+    ["Kinga eizooba ryawe", "Buri kyeggyezi kanda “Kinga eizooba ryangye” ohandiike kopi na sente ebi oine butoosha. Ha sitoo sente na kopi ezitaguzirwe."],
+  ],
+};
+
 export function Guide({ me, open, onClose }: { me: Me; open: boolean; onClose: () => void }) {
   const { lang, t } = useT();
   const [i, setI] = useState(0);
   useEffect(() => { if (open) setI(0); }, [open]);
   if (!open) return null;
   const steps = STEPS[me.role];
-  const [title, text] = steps[i][lang];
+  const [title, text] = lang === "nyn" ? (NYN[me.role][i] ?? steps[i].en) : steps[i][lang];
   const last = i === steps.length - 1;
   return (
     <div className="guide-backdrop" role="dialog" aria-modal="true" aria-label={t("Help guide")}>

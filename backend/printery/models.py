@@ -424,3 +424,29 @@ class Feedback(Base):
 
 
 CANCELLABLE["expense"] = Expense
+
+
+class DebtNote(Base):
+    """A note on a school that owes money, often a promise to pay a set amount by a date."""
+
+    school = models.ForeignKey(School, on_delete=models.PROTECT, related_name="debt_notes")
+    text = models.CharField(max_length=500)
+    promised_amount = models.PositiveIntegerField(null=True, blank=True)
+    promised_date = models.DateField(null=True, blank=True)
+    history = HistoricalRecords()
+
+    class Meta(Base.Meta):
+        ordering = ["-created_at"]
+
+
+class WhatsAppMessage(models.Model):
+    """A WhatsApp debt reminder sent automatically (WhatsApp Business API)."""
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="whatsapp_messages")
+    kind = models.CharField(max_length=20)  # before_due, overdue, weekly
+    key = models.CharField(max_length=80, blank=True, db_index=True, help_text="Stops the same reminder being sent twice")
+    phone = models.CharField(max_length=20)
+    amount = models.PositiveIntegerField()
+    status = models.CharField(max_length=10)  # sent, failed
+    error = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

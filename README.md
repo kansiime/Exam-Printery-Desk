@@ -149,8 +149,23 @@ When an exam is finished, the owner taps **Close exam** on the Overview. Its rec
 ## Help, language and feedback
 
 - Each person sees a short guide for their job the first time they sign in; it's under the account menu → **Help guide** after that.
-- **Luganda**: switch on the sign-in page or under **My account**. Menus, buttons, page titles and the guides are translated in `frontend/lib/i18n.tsx` (and `components/Guide.tsx`); please have a fluent speaker check them. Anything not translated stays in English.
+- **Luganda and Runyankore**: choose on the sign-in page or under **My account**. Menus, buttons, page titles and the guides are translated in `frontend/lib/i18n.tsx` and `components/Guide.tsx`; please have fluent speakers check them. Anything not translated stays in English.
 - Anyone can send a problem or idea from the account menu → **Report a problem or idea**. The owner is notified and sees them on **Pilot week**.
+
+## Debt follow-up: notes, promises and WhatsApp
+
+On **Debts**, each school that owes has:
+- **Add note or promise**: write what the school said, with an optional promised amount and date. Reminders then follow the newest promised date, and if the date passes without that amount being paid, the owner and sales person get an urgent "promise broken" alert.
+- **Remind on WhatsApp**: opens WhatsApp with a ready-written reminder to the school's phone (works on any phone, no setup).
+- **Call** and **Record payment**.
+
+**Automatic WhatsApp reminders** (2 days before the promised/due date, when it is missed, then weekly) use the WhatsApp Business Cloud API from Meta:
+1. Create a Meta Business account and a WhatsApp Business app (developers.facebook.com → My Apps → Create app → Business → add WhatsApp). Add and verify your business phone number.
+2. In WhatsApp Manager create a message template, category **Utility**, language English, with four body variables in this order: school name, amount, date, business name. Example: `Hello {{1}}, this is a reminder that UGX {{2}} for exams is due on {{3}}. Thank you. {{4}}`. Wait for approval.
+3. Create a permanent access token (System user with WhatsApp permissions).
+4. On the backend set `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` (the phone number ID, not the number), `WHATSAPP_TEMPLATE` (the template name) and, if not English, `WHATSAPP_TEMPLATE_LANG`.
+
+Each reminder is sent once per stage and listed on the school's card ("Overdue reminder sent on WhatsApp ✓"). Meta charges a small fee per business-started conversation. Without these settings nothing is sent automatically and the buttons are used instead.
 
 ## Pilot week
 
