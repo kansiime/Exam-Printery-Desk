@@ -3,6 +3,7 @@ import { createContext, useContext, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { shrinkPhoto, when } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { Icon } from "./icons";
 
 // ---- toast ----
 const ToastCtx = createContext<(msg: string) => void>(() => {});
@@ -131,4 +132,56 @@ export function CancelOrReport({ type, id, onDone }: { type: string; id: number;
 
 export function ErrorNote({ error }: { error: string }) {
   return error ? <div className="banner">{error} Figures shown may be out of date.</div> : null;
+}
+
+// ---- layout helpers ----
+export function PageHead({ title, sub, children }: { title: string; sub?: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <div className="pagehead">
+      <div className="grow"><h1>{title}</h1>{sub && <p className="sub">{sub}</p>}</div>
+      {children}
+    </div>
+  );
+}
+
+/** A form or tool that stays folded until needed, so screens stay short on phones. */
+export function Disclosure({ title, sub, icon = "plus", primary, defaultOpen, children }: {
+  title: string; sub?: string; icon?: string; primary?: boolean; defaultOpen?: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <section className={`disclosure ${primary ? "primary" : ""}`} data-open={open}>
+      <button type="button" className="dhead" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="dicon"><Icon name={icon} /></span>
+        <span className="dtitle"><b>{title}</b>{sub && <span className="sub">{sub}</span>}</span>
+        <span className="chev"><Icon name="chevron" /></span>
+      </button>
+      {open && <div className="dbody">{children}</div>}
+    </section>
+  );
+}
+
+export function EmptyCard({ icon = "inbox", children }: { icon?: string; children: React.ReactNode }) {
+  return <div className="panel emptycard"><div><Icon name={icon} size={36} /></div><p className="empty">{children}</p></div>;
+}
+
+export type Column<T> = { label: string; cell: (row: T) => React.ReactNode; bad?: (row: T) => boolean };
+
+/** A table on computers that becomes one card per row on phones. */
+export function DataTable<T>({ columns, rows, rowKey, empty }: { columns: Column<T>[]; rows: T[]; rowKey: (r: T) => string | number; empty: string }) {
+  if (!rows.length) return <EmptyCard>{empty}</EmptyCard>;
+  return (
+    <div className="tablewrap cards">
+      <table>
+        <thead><tr>{columns.map((c) => <th key={c.label}>{c.label}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={rowKey(r)}>
+              {columns.map((c) => <td key={c.label} data-label={c.label} className={c.bad?.(r) ? "bad" : ""}>{c.cell(r)}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

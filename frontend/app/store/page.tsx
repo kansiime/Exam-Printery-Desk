@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, ErrorNote, Feed, Pill, useAction } from "@/components/ui";
+import { CancelOrReport, DataTable, EmptyCard, ErrorNote, Feed, PageHead, Pill, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { useData } from "@/lib/session";
@@ -32,11 +32,11 @@ function Store() {
   return (
     <>
       <ErrorNote error={sum.error} />
-      <div><h2>Store</h2><p className="sub">Fold and count what the printer sends, issue copies to sales people, and take back what they didn&apos;t sell.</p></div>
+      <PageHead title="Store" sub={<>Fold and count what the printer sends, issue copies to sales people, and take back what they didn&apos;t sell.</>} />
       <section className="block">
         <h3>1. Fold and count</h3>
         {exams.filter((e) => e.to_count).map((e) => <CountTicket key={e.id} exam={e} onDone={reload} />)}
-        {!exams.some((e) => e.to_count) && <div className="panel"><p className="empty">Nothing waiting. Exams appear here when the printer posts them.</p></div>}
+        {!exams.some((e) => e.to_count) && <EmptyCard icon="box">Nothing waiting to count. Exams appear here when the printer posts them.</EmptyCard>}
       </section>
       <div className="split">
         <IssueForm exams={exams.filter((e) => e.in_store > 0)} sales={sales} onDone={reload} />
@@ -44,12 +44,14 @@ function Store() {
       </div>
       <section className="block">
         <h3>Stock</h3>
-        <div className="tablewrap"><table style={{ minWidth: 420 }}>
-          <thead><tr><th>Exam</th><th>Counted</th><th>Issued</th><th>Returned</th><th>In store</th></tr></thead>
-          <tbody>{exams.filter((e) => e.counted != null).map((e) => (
-            <tr key={e.id}><td>{e.name}</td><td>{fmt(e.counted)}</td><td>{fmt(e.issued)}</td><td>{fmt(e.returned)}</td><td className={e.in_store < 0 ? "bad" : ""}><b>{fmt(e.in_store)}</b></td></tr>
-          ))}</tbody>
-        </table></div>
+        <DataTable<StoreExam> rows={exams.filter((e) => e.counted != null)} rowKey={(e) => e.id} empty="No stock yet."
+          columns={[
+            { label: "Exam", cell: (e) => <b>{e.name}</b> },
+            { label: "Counted", cell: (e) => fmt(e.counted) },
+            { label: "Issued", cell: (e) => fmt(e.issued) },
+            { label: "Returned", cell: (e) => fmt(e.returned) },
+            { label: "In store", cell: (e) => <b>{fmt(e.in_store)}</b>, bad: (e) => e.in_store < 0 },
+          ]} />
       </section>
       <section className="panel"><h3>Recent store movements</h3><Feed items={moves} empty="Counts, issues and returns appear here." /></section>
     </>

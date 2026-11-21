@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, ErrorNote, Feed, PhotoInput, useAction } from "@/components/ui";
+import { CancelOrReport, Disclosure, EmptyCard, ErrorNote, Feed, PageHead, PhotoInput, useAction } from "@/components/ui";
 import { api, toForm } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { useData } from "@/lib/session";
@@ -29,9 +29,9 @@ function Printing() {
   return (
     <>
       <ErrorNote error={exams.error || runs.error} />
-      <div><h2>Printing</h2><p className="sub">For every job, read the copier meter and take a photo of it before you start and after you finish.</p></div>
+      <PageHead title="Printing" sub={<>For every job, read the copier meter and take a photo of it before you start and after you finish.</>} />
       {todo.length ? todo.map((e) => <Ticket key={e.id} exam={e} run={(runs.data ?? []).find((r) => r.exam === e.id && !r.done_at)} onDone={reload} />)
-        : <div className="panel"><p className="empty">Nothing to print. New orders from the owner appear here.</p></div>}
+        : <EmptyCard icon="printer">Nothing to print right now. New orders from the owner appear here.</EmptyCard>}
       <OtherPrinting onDone={reload} />
       <section className="panel"><h3>Recently printed</h3><Feed items={recent} empty="Nothing printed yet." /></section>
     </>
@@ -93,8 +93,7 @@ function OtherPrinting({ onDone }: { onDone: () => void }) {
   const [after, setAfter] = useState<Blob | null>(null);
   const { busy, run } = useAction();
   return (
-    <section className="panel">
-      <div><h3>Other printing (not exams)</h3><p className="sub">Record any other work on the copier too, or the owner sees pages with no record.</p></div>
+    <Disclosure title="Other printing (not exams)" sub="Record any other work on the copier, or the owner sees pages with no record" icon="printer">
       <form onSubmit={async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -114,6 +113,6 @@ function OtherPrinting({ onDone }: { onDone: () => void }) {
         </div>
         <div><button disabled={busy}>Record other printing</button></div>
       </form>
-    </section>
+    </Disclosure>
   );
 }

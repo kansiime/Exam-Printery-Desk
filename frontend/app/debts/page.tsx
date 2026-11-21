@@ -1,6 +1,6 @@
 "use client";
 import { Shell } from "@/components/Shell";
-import { ErrorNote, Kpi, Pill, useAction } from "@/components/ui";
+import { EmptyCard, ErrorNote, Kpi, PageHead, Pill, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, ugx, when } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
@@ -19,7 +19,7 @@ function DebtsScreen({ me }: { me: Me }) {
   return (
     <>
       <ErrorNote error={d.error} />
-      <div><h2>{me.role === "sales" ? "My schools that owe" : "Debts"}</h2><p className="sub">Record money as soon as a school pays.{me.role === "sales" ? " Cash you collect is added to what you must hand in." : ""}</p></div>
+      <PageHead title={me.role === "sales" ? "My schools that owe" : "Debts"} sub={<>Record money as soon as a school pays.{me.role === "sales" ? " Cash you collect is added to what you must hand in." : ""}</>} />
       <div className="kpis">
         <Kpi label="Total owed" value={fmt(data?.total)} bad={(data?.total ?? 0) > 0} />
         <Kpi label="Under 30 days" value={fmt(data?.ageing.under_30)} />
@@ -50,7 +50,7 @@ function DebtsScreen({ me }: { me: Me }) {
             <label>&nbsp;<button disabled={busy}>Record payment</button></label>
           </form>
         </div>
-      )) : <div className="panel"><p className="empty">No schools owe money right now.</p></div>}
+      )) : <EmptyCard icon="check">No schools owe money right now.</EmptyCard>}
       {me.role === "owner" && data && data.total > 0 && <p className="mini">Biggest debtor: {data.schools[0].school}, {ugx(data.schools[0].total)}.</p>}
     </>
   );

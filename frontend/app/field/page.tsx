@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, ErrorNote, Feed, Kpi, PhotoInput, useAction, useToast } from "@/components/ui";
+import { CancelOrReport, EmptyCard, ErrorNote, Feed, Kpi, PageHead, PhotoInput, useAction, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, today, ugx, when } from "@/lib/format";
 import { discard, flush, listPending, submitVisit } from "@/lib/outbox";
@@ -45,7 +45,7 @@ function FieldScreen() {
   return (
     <>
       <ErrorNote error={sum.error} />
-      <div><h2>My field work</h2><p className="sub">Accept the copies the store gives you, then record every school you visit. Visits save on your phone when there is no network and send later.</p></div>
+      <PageHead title="My field work" sub={<>Accept the copies the store gives you, then record every school you visit. With no network, visits save on your phone and send later.</>} />
 
       {!!s?.pending_issues.length && (
         <section className="block"><h3>Copies issued to you</h3>
@@ -80,7 +80,8 @@ function FieldScreen() {
         </section>
       )}
 
-      <VisitForm holding={s?.holding_by_exam ?? []} schools={schools.data ?? []} onSaved={(how) => { toast(how === "sent" ? "Visit saved" : "No network. Visit saved on your phone and will send later."); reload(); refreshOutbox(); }} />
+      {s && !s.holding_by_exam.length ? <EmptyCard icon="box">You hold no copies right now. Ask the store keeper to issue some, then accept them here to start recording school visits.</EmptyCard> :
+      <VisitForm holding={s?.holding_by_exam ?? []} schools={schools.data ?? []} onSaved={(how) => { toast(how === "sent" ? "Visit saved" : "No network. Visit saved on your phone and will send later."); reload(); refreshOutbox(); }} />}
 
       <section className="panel"><h3>My recent visits</h3>
         <Feed empty="No visits recorded yet." items={(visits.data ?? []).slice(0, 15).map((v) => ({

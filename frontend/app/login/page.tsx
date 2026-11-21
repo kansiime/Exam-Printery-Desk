@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/icons";
 import { api } from "@/lib/api";
 import { HOME, Me, useSession } from "@/lib/session";
 
@@ -15,8 +16,8 @@ export default function Login() {
   useEffect(() => { if (me) router.replace(HOME[me.role]); }, [me, router]);
 
   return (
-    <div className="wrap center">
-      <form className="panel login" onSubmit={async (e) => {
+    <div className="loginpage">
+      <form className="panel" onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
         setError("");
@@ -30,11 +31,13 @@ export default function Login() {
           setBusy(false);
         }
       }}>
-        <div><h2>Exam Printery Desk</h2><p className="sub">Sign in with the username and password the owner gave you.</p></div>
-        {error && <div className="banner">{error}</div>}
-        <label>Username<input id="username" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
+        <span className="logo"><Logo size={26} /></span>
+        <div><h1 style={{ fontSize: "1.5rem" }}>Welcome back</h1><p className="sub">Sign in with the username and password the owner gave you.</p></div>
+        {error && <div className="banner" role="alert">{error}</div>}
+        <label>Username<input id="username" autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
         <label>Password<input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <button disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+        <p className="mini" style={{ textAlign: "center", margin: 0 }}>Forgot your password? Ask the owner to set a new one.</p>
       </form>
     </div>
   );

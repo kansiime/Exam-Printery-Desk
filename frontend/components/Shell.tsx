@@ -1,25 +1,43 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useGuard, useSession } from "@/lib/session";
+import { Icon, Logo } from "./icons";
 
-const TABS: Record<Me["role"], [string, string][]> = {
-  owner: [["/owner", "Overview"], ["/owner/fraud", "Fraud checks"], ["/print", "Printing"], ["/store", "Store"],
-          ["/debts", "Debts"], ["/owner/schools", "Schools"], ["/cash", "Cash"], ["/owner/team", "Team"]],
-  printer: [["/print", "Printing"]],
-  store: [["/store", "Store"], ["/cash", "Cash"]],
-  sales: [["/field", "My field"], ["/debts", "Debts"]],
+type Tab = { href: string; label: string; short: string; icon: string };
+
+const TABS: Record<Me["role"], Tab[]> = {
+  owner: [
+    { href: "/owner", label: "Overview", short: "Home", icon: "home" },
+    { href: "/owner/fraud", label: "Fraud checks", short: "Checks", icon: "shield" },
+    { href: "/print", label: "Printing", short: "Print", icon: "printer" },
+    { href: "/store", label: "Store", short: "Store", icon: "box" },
+    { href: "/debts", label: "Debts", short: "Debts", icon: "receipt" },
+    { href: "/cash", label: "Cash", short: "Cash", icon: "coins" },
+    { href: "/owner/schools", label: "Schools", short: "Schools", icon: "school" },
+    { href: "/owner/team", label: "Team", short: "Team", icon: "users" },
+  ],
+  printer: [{ href: "/print", label: "Printing", short: "Printing", icon: "printer" }],
+  store: [
+    { href: "/store", label: "Store", short: "Store", icon: "box" },
+    { href: "/cash", label: "Cash", short: "Cash", icon: "coins" },
+  ],
+  sales: [
+    { href: "/field", label: "My field work", short: "Field", icon: "route" },
+    { href: "/debts", label: "Debts", short: "Debts", icon: "receipt" },
+  ],
 };
 
-/** Page frame: brand, the signed-in person, and only the tabs their role may use. */
+// Phones have room for five tabs; the owner's other screens sit in the account menu.
+const PHONE_TABS = 5;
+
+/** Page frame: side menu on computers, bottom tabs on phones, and only the screens this role may use. */
 export function Shell({ allow, children }: { allow: Me["role"][]; children: (me: Me) => React.ReactNode }) {
   const me = useGuard(allow);
-  const { setMe } = useSession();
   const path = usePathname();
-  const router = useRouter();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -30,33 +48,70 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", up); };
   }, []);
 
-  if (!me) return <div className="wrap"><main><div className="banner info">Loading…</div></main></div>;
+  if (!me) return <div className="loading">Loading…</div>;
   const tabs = TABS[me.role];
+  const current = tabs.find((t) => t.href === path);
+  const phoneTabs = tabs.slice(0, PHONE_TABS);
+  const extra = tabs.slice(PHONE_TABS);
+
   return (
-    <>
-      <header className="top">
-        <div className="wrap">
-          <div className="brand">
-            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="var(--accent)" strokeWidth="2" /><path d="M11 1v20M1 11h20" stroke="var(--ink)" strokeWidth="1.5" /></svg>
-            <h1>{me.business}</h1>
-            <span className="who">
-              {me.name}<span className="rolechip">{ROLE_LABEL[me.role]}</span>
-              <button type="button" className="ghost" onClick={async () => {
-                await api("auth/logout", { body: {} }).catch(() => undefined);
-                setMe(null);
-                router.replace("/login");
-              }}>Sign out</button>
-            </span>
-          </div>
-          {tabs.length > 1 && (
-            <nav className="tabs" aria-label="Sections">
-              {tabs.map(([href, label]) => <Link key={href} href={href} aria-current={path === href ? "page" : undefined}>{label}</Link>)}
-            </nav>
-          )}
-        </div>
+    <div className="app">
+      <nav className="side" aria-label="Main menu">
+        <div className="brandmark"><span className="logo"><Logo /></span><div><b>{me.business}</b><small>Exam Printery Desk</small></div></div>
+        {tabs.map((t) => (
+          <Link key={t.href} href={t.href} aria-current={path === t.href ? "page" : undefined}><Icon name={t.icon} />{t.label}</Link>
+        ))}
+      </nav>
+
+      <header className="topbar">
+        <div className="brandmark"><span className="logo"><Logo /></span><div><b>{me.business}</b><small>{current?.label ?? ""}</small></div></div>
+        <span className="pagetitle">{current?.label}</span>
+        <AccountMenu me={me} extra={extra} />
       </header>
+
       {!online && <div className="offline">No network. You can keep working; changes that need the internet will wait.</div>}
-      <div className="wrap"><main>{children(me)}</main></div>
-    </>
+
+      <main className="content">{children(me)}</main>
+
+      {tabs.length > 1 && (
+        <nav className="bottomnav" aria-label="Main menu">
+          {phoneTabs.map((t) => (
+            <Link key={t.href} href={t.href} aria-current={path === t.href ? "page" : undefined}><Icon name={t.icon} /><span>{t.short}</span></Link>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
+}
+
+function AccountMenu({ me, extra }: { me: Me; extra: Tab[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { setMe } = useSession();
+  const router = useRouter();
+  useEffect(() => {
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+  const initials = me.name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <div className="account" ref={ref}>
+      <button type="button" className="avatar" aria-label="Account menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{initials}</button>
+      {open && (
+        <div className="menu" role="menu">
+          <div className="who-name">{me.name}</div>
+          <div className="who-role">{ROLE_LABEL[me.role]}</div>
+          {extra.map((t) => (
+            <button key={t.href} type="button" className="plain extra-link" onClick={() => { setOpen(false); router.push(t.href); }}><Icon name={t.icon} />{t.label}</button>
+          ))}
+          <button type="button" className="plain" onClick={async () => {
+            await api("auth/logout", { body: {} }).catch(() => undefined);
+            setMe(null);
+            router.replace("/login");
+          }}><Icon name="logout" />Sign out</button>
+        </div>
+      )}
+    </div>
   );
 }

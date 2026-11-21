@@ -1,6 +1,6 @@
 "use client";
 import { Shell } from "@/components/Shell";
-import { ErrorNote, Feed, Findings, Pill, Thumb, useAction } from "@/components/ui";
+import { DataTable, Disclosure, EmptyCard, ErrorNote, Feed, Findings, PageHead, Pill, Thumb, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, ugx, when } from "@/lib/format";
 import { useData } from "@/lib/session";
@@ -35,23 +35,26 @@ function Fraud() {
   return (
     <>
       <ErrorNote error={a.error} />
-      <div><h2>Fraud checks</h2><p className="sub">These checks compare records the printer and store keeper can&apos;t both control: the copier meter, paper, serial numbers, surprise counts, mobile money and the schools themselves.</p></div>
+      <PageHead title="Fraud checks" sub={<>These checks compare records the printer and store keeper can&apos;t both control: the copier meter, paper, serial numbers, surprise counts, mobile money and the schools themselves.</>} />
       <section className="block"><h3>Findings</h3><Findings items={d?.findings ?? []} empty="No problems found in the records so far." /></section>
 
       <section className="block"><div><h3>Copier meter vs copies posted</h3><p className="sub">Expected pages = copies × pages per copy + spoilt sheets. Tap a photo to check it matches the typed reading.</p></div>
-        <div className="tablewrap"><table>
-          <thead><tr><th>Exam</th><th>Copies</th><th>Pages/copy</th><th>Expected pages</th><th>Copier pages</th><th>Extra pages</th><th>Before</th><th>After</th></tr></thead>
-          <tbody>{(d?.meter ?? []).map((r) => (
-            <tr key={r.exam_id}><td>{r.exam}<br /><span className="mini">{r.machine} · {fmt(r.meter_before)} → {fmt(r.meter_after)}</span></td>
-              <td>{fmt(r.qty)}</td><td>{fmt(r.pages)}</td><td>{fmt(r.expected)}</td><td>{fmt(r.meter_pages)}</td>
-              <td className={(r.extra ?? 0) > Math.max(r.pages, 1) ? "bad" : ""}>{r.extra == null ? "–" : (r.extra > 0 ? "+" : "") + fmt(r.extra)}</td>
-              <td><Thumb src={r.photo_before} /></td><td><Thumb src={r.photo_after} /></td></tr>
-          ))}</tbody>
-        </table></div>
+        <DataTable<MeterRow> rows={d?.meter ?? []} rowKey={(r) => r.exam_id} empty="No finished print jobs yet."
+          columns={[
+            { label: "Exam", cell: (r) => <><b>{r.exam}</b><br /><span className="mini">{r.machine} · meter {fmt(r.meter_before)} → {fmt(r.meter_after)}</span></> },
+            { label: "Copies", cell: (r) => fmt(r.qty) },
+            { label: "Pages per copy", cell: (r) => fmt(r.pages) },
+            { label: "Expected pages", cell: (r) => fmt(r.expected) },
+            { label: "Copier pages", cell: (r) => fmt(r.meter_pages) },
+            { label: "Extra pages", cell: (r) => (r.extra == null ? "–" : (r.extra > 0 ? "+" : "") + fmt(r.extra)), bad: (r) => (r.extra ?? 0) > Math.max(r.pages, 1) },
+            { label: "Meter before", cell: (r) => <Thumb src={r.photo_before} /> },
+            { label: "Meter after", cell: (r) => <Thumb src={r.photo_after} /> },
+          ]} />
         {!!d?.gaps.length && <div className="panel"><h3>Pages with no record</h3><Feed empty="" items={d.gaps.map((g, i) => ({ key: i, text: <><b>{fmt(g.pages)} pages</b> on {g.machine} between “{g.after}” and “{g.before}”</> }))} /></div>}
       </section>
 
-      <section className="panel"><div><h3>Mobile money statement</h3><p className="sub">Paste payments from your mobile money statement or SMS list, one per line: transaction ID, then amount. Every mobile money sale your team records must appear here. Payment providers can also send these automatically (see the setup guide).</p></div>
+      <Disclosure title="Mobile money statement" sub="Paste payments from your statement to check every mobile money sale" icon="coins">
+        <p className="sub" style={{ margin: 0 }}>Paste payments from your mobile money statement or SMS list, one per line: transaction ID, then amount. Every mobile money sale your team records must appear here. Payment providers can also send these automatically (see the setup guide).</p>
         <form onSubmit={async (e) => {
           e.preventDefault();
           const form = e.currentTarget, f = new FormData(form);
@@ -64,19 +67,23 @@ function Fraud() {
         </form>
         <p className="mini">{fmt(d?.momo.statement_count)} statement payments entered · {fmt(d?.momo.recorded_count)} mobile money payments recorded by the team
           {!!d?.momo.unmatched_statement.length && <> · on your statement with no sale recorded: {d.momo.unmatched_statement.slice(0, 8).map((m) => `${m.tx_id} ${fmt(m.amount)}`).join(", ")}</>}</p>
-      </section>
+      </Disclosure>
 
       <section className="block"><div><h3>Recent sales and delivery notes</h3><p className="sub">Tap a photo to check the school&apos;s signature, copies and amount.</p></div>
-        <div className="tablewrap"><table>
-          <thead><tr><th>School</th><th>Note no.</th><th>Copies</th><th>Paid</th><th>How</th><th>Sold by</th><th>Photo</th></tr></thead>
-          <tbody>{(d?.recent_sales ?? []).map((v) => (
-            <tr key={v.id}><td>{v.school_name}<br /><span className="mini">{when(v.date)} · {v.exam_name}</span></td><td>{v.note_no}</td><td>{fmt(v.copies)}</td><td>{fmt(v.paid)}</td>
-              <td>{v.method === "momo" ? <>Mobile money<br /><span className="mini">{v.momo_id}</span></> : v.method === "cash" ? "Cash" : "Not paid"}</td><td>{v.sales_name}</td><td><Thumb src={v.note_photo} /></td></tr>
-          ))}</tbody>
-        </table></div>
+        <DataTable<Sale> rows={d?.recent_sales ?? []} rowKey={(v) => v.id} empty="No sales yet."
+          columns={[
+            { label: "School", cell: (v) => <><b>{v.school_name}</b><br /><span className="mini">{when(v.date)} · {v.exam_name}</span></> },
+            { label: "Delivery note", cell: (v) => v.note_no },
+            { label: "Copies", cell: (v) => fmt(v.copies) },
+            { label: "Paid", cell: (v) => fmt(v.paid) },
+            { label: "How", cell: (v) => (v.method === "momo" ? <>Mobile money<br /><span className="mini">{v.momo_id}</span></> : v.method === "cash" ? "Cash" : "Not paid") },
+            { label: "Sold by", cell: (v) => v.sales_name },
+            { label: "Photo", cell: (v) => <Thumb src={v.note_photo} /> },
+          ]} />
       </section>
 
-      <section className="panel"><div><h3>Paper</h3><p className="sub">Record every ream you give the printer. Sheets used is worked out from the copier meter.</p></div>
+      <Disclosure title="Paper" sub="Record reams you give the printer" icon="box">
+        <p className="sub" style={{ margin: 0 }}>Record every ream you give the printer. Sheets used is worked out from the copier meter.</p>
         <div className="calc"><div>Sheets given<b>{fmt(d?.paper.issued)}</b></div><div>Used (meter)<b>{fmt(d?.paper.used)}</b></div><div>Should be left<b>{fmt(d?.paper.left)}</b></div></div>
         <form className="grid3" onSubmit={async (e) => {
           e.preventDefault();
@@ -87,9 +94,10 @@ function Fraud() {
           <label>Sheets per ream<input name="per" type="number" min={1} inputMode="numeric" required defaultValue={500} /></label>
           <label>&nbsp;<button disabled={busy}>Record paper given</button></label>
         </form>
-      </section>
+      </Disclosure>
 
-      <section className="panel"><div><h3>Surprise stock count</h3><p className="sub">Count when nobody expects it. The expected figures stay hidden until you save, so the count is honest.</p></div>
+      <Disclosure title="Surprise stock count" sub="Count when nobody expects it" icon="check">
+        <p className="sub" style={{ margin: 0 }}>Count when nobody expects it. The expected figures stay hidden until you save, so the count is honest.</p>
         <form onSubmit={async (e) => {
           e.preventDefault();
           const form = e.currentTarget, f = new FormData(form);
@@ -105,7 +113,7 @@ function Fraud() {
           text: <>{c.items.map((i, k) => <div key={k}>{i.exam}: counted {fmt(i.counted)}, records {fmt(i.expected)} {i.counted !== i.expected ? <b style={{ color: "var(--bad)" }}>({i.counted - i.expected > 0 ? "+" : ""}{fmt(i.counted - i.expected)})</b> : "✓"}</div>)}
             {c.paper_counted != null && <div>Paper: counted {fmt(c.paper_counted)}, expected {fmt(c.paper_expected)}</div>}</>,
         }))} />
-      </section>
+      </Disclosure>
 
       <section className="block"><div><h3>This week&apos;s school calls</h3><p className="sub">Ask each school how many copies it received, from whom, and what it paid. The list changes each week and skips schools checked in the last 30 days. Schools with a phone number are also asked by SMS after every sale.</p></div>
         {(d?.weekly_schools ?? []).map((s) => (
@@ -123,7 +131,7 @@ function Fraud() {
             </form>
           </div>
         ))}
-        {!d?.weekly_schools.length && <div className="panel"><p className="empty">No schools to call. Schools appear once sales are recorded.</p></div>}
+        {!d?.weekly_schools.length && <EmptyCard icon="school">No schools to call yet. Schools appear once sales are recorded.</EmptyCard>}
         <div className="panel"><h3>Found a school using our exams that isn&apos;t in the records?</h3>
           <form className="grid3" onSubmit={async (e) => {
             e.preventDefault();

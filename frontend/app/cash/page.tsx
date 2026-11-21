@@ -1,6 +1,6 @@
 "use client";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, ErrorNote, Feed, Kpi, Pill, useAction } from "@/components/ui";
+import { CancelOrReport, DataTable, ErrorNote, Feed, Kpi, PageHead, Pill, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, ugx } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
@@ -24,7 +24,7 @@ function CashScreen({ me }: { me: Me }) {
   return (
     <>
       <ErrorNote error={sum.error} />
-      <div><h2>Cash</h2><p className="sub">Sales people hand cash to the store keeper. The store keeper hands it to the owner, and the owner confirms. Mobile money goes straight to the business number.</p></div>
+      <PageHead title="Cash" sub={<>Sales people hand cash to the store keeper. The store keeper hands it to the owner, and the owner confirms. Mobile money goes straight to the business number.</>} />
       <div className="kpis">
         <Kpi label="With sales people" value={fmt(s?.sales.reduce((a, x) => a + x.cash_held, 0))} />
         <Kpi label="With store keeper" value={fmt(s?.store.held)} bad={(s?.store.held ?? 0) > 0} />
@@ -32,10 +32,13 @@ function CashScreen({ me }: { me: Me }) {
         <Kpi label="Confirmed by owner" value={fmt(s?.store.confirmed)} />
       </div>
       <section className="block"><h3>Cash each sales person should hand in</h3>
-        <div className="tablewrap"><table style={{ minWidth: 420 }}>
-          <thead><tr><th>Sales person</th><th>Collected</th><th>Handed in</th><th>Still to hand in</th></tr></thead>
-          <tbody>{(s?.sales ?? []).map((x) => <tr key={x.id}><td>{x.name}</td><td>{fmt(x.cash_collected)}</td><td>{fmt(x.handed)}</td><td className={x.cash_held > 0 ? "bad" : ""}><b>{fmt(x.cash_held)}</b></td></tr>)}</tbody>
-        </table></div>
+        <DataTable<Summary["sales"][number]> rows={s?.sales ?? []} rowKey={(x) => x.id} empty="No sales people yet."
+          columns={[
+            { label: "Sales person", cell: (x) => <b>{x.name}</b> },
+            { label: "Collected", cell: (x) => fmt(x.cash_collected) },
+            { label: "Handed in", cell: (x) => fmt(x.handed) },
+            { label: "Still to hand in", cell: (x) => <b>{fmt(x.cash_held)}</b>, bad: (x) => x.cash_held > 0 },
+          ]} />
       </section>
       {isStore && (
         <div className="split">
