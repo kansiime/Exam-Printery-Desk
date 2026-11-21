@@ -58,7 +58,35 @@ On the real system, create the owner with `python manage.py createsuperuser`. Th
 
 Tests: `cd backend && python -m pytest` (the full process, every fraud check, offline retries and role permissions).
 
-## Put it online
+## Put it online on Render
+
+The repository includes `render.yaml`, a Render Blueprint that creates everything:
+
+| Render service | What it is |
+|---|---|
+| `printery-db` | PostgreSQL database |
+| `exam-printery-api` | Django API and admin, with a 2 GB disk for meter and delivery-note photos |
+| `exam-printery-app` | The phone app. **This is the address your team opens.** |
+| `exam-printery-daily-summary` | Cron job that texts the owner at 20:37 Kampala time |
+
+1. Sign in at https://dashboard.render.com, then **New → Blueprint**, and connect the `Exam-Printery-Desk` GitHub repository.
+2. Render asks for the values marked `sync: false`:
+   - `BUSINESS_NAME`: your printery's name
+   - `OWNER_USERNAME` and `OWNER_PASSWORD`: your owner login, created on the first deploy (password 8+ characters)
+   - `OWNER_PHONE`: for the daily summary (07XXXXXXXX)
+   - `AT_API_KEY` and `AT_SENDER_ID`: leave empty until you have Africa's Talking
+3. Click **Apply**. The first build takes about 5–10 minutes.
+4. Open the **exam-printery-app** URL (for example `https://exam-printery-app.onrender.com`), sign in as the owner, and add your workers on the **Team** screen.
+
+The API, app and cron job use paid "Starter" plans, and the database uses a paid plan. The free plans sleep after 15 minutes, can't keep photos, and the free database expires. Check current prices on Render's pricing page.
+
+**Your own domain (optional):** add it to `exam-printery-app` under Settings → Custom Domains. Then set `DJANGO_CSRF_TRUSTED_ORIGINS` to `https://your-domain` in the `printery-settings` environment group.
+
+**SMS later:** in the `printery-settings` group, set `SMS_PROVIDER=africastalking`, `AT_USERNAME`, `AT_API_KEY` and `AT_SENDER_ID`. Point Africa's Talking's incoming messages to `https://YOUR-APP-URL/api/webhooks/sms/?token=` followed by the generated `SMS_WEBHOOK_TOKEN`.
+
+**Backups:** Render backs up paid databases automatically. Photos are on the API's disk, which Render snapshots daily.
+
+## Put it online on your own server
 
 On a small cloud server (VPS) with Docker:
 

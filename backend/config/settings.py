@@ -33,6 +33,8 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:3000")
+if env("RENDER_EXTERNAL_HOSTNAME"):  # set automatically by Render
+    ALLOWED_HOSTS.append(env("RENDER_EXTERNAL_HOSTNAME"))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -78,6 +80,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+def database_from_url(url):
+    """postgresql://user:pass@host:port/name (what Render and most hosts give you)."""
+    from urllib.parse import unquote, urlparse
+    u = urlparse(url)
+    return {"NAME": u.path.lstrip("/"), "USER": unquote(u.username or ""), "PASSWORD": unquote(u.password or ""),
+            "HOST": u.hostname or "", "PORT": str(u.port or 5432)}
+
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -89,6 +99,8 @@ DATABASES = {
         "CONN_MAX_AGE": 60,
     }
 }
+if env("DATABASE_URL"):
+    DATABASES["default"].update(database_from_url(env("DATABASE_URL")))
 
 AUTH_USER_MODEL = "accounts.User"
 

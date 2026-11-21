@@ -190,3 +190,29 @@ def test_sms_reply_dispute(api, team, settings):
     r = anon.post("/api/webhooks/sms/?token=t0ken", {"from": "+256772000000", "text": "2"})
     assert r.data["matched"] is True
     assert any("NOT correct" in f for f in findings(api))
+
+
+def test_health_and_photos_need_login(api, team):
+    exam = full_flow(api, team)
+    assert APIClient().get("/api/health/").status_code == 200
+    url = api["owner"].get("/api/prints/").data[0]["photo_before"]
+    path = url[url.index("/media/"):]
+    assert APIClient().get(path).status_code == 403
+    c = APIClient()
+    c.force_login(team["owner"])
+    assert c.get(path).status_code == 200
+
+
+def test_database_url_parsing():
+    from config.settings import database_from_url
+    d = database_from_url("postgresql://print%40er:p%3Ass@db.internal/printery")
+    assert d == {"NAME": "printery", "USER": "print@er", "PASSWORD": "p:ss", "HOST": "db.internal", "PORT": "5432"}
+
+
+def test_ensure_owner(monkeypatch):
+    from django.core.management import call_command
+    monkeypatch.setenv("OWNER_USERNAME", "boss")
+    monkeypatch.setenv("OWNER_PASSWORD", "long-enough-pass")
+    call_command("ensure_owner")
+    call_command("ensure_owner")
+    assert User.objects.get(username="boss").role == "owner"

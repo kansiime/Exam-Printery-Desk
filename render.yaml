@@ -1,0 +1,104 @@
+# Render Blueprint: creates the whole Exam Printery Desk system.
+# In Render: New > Blueprint > pick this repository. Render asks for the values marked "sync: false".
+# All services are in one region so they can talk over Render's private network.
+
+envVarGroups:
+  - name: printery-settings
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: "*"             # the backend is only reached through the app; tighten once you add your own domain
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"   # replace with https://your-domain once you add one
+      - key: CELERY_EAGER
+        value: "1"             # no Redis needed: SMS are sent straight away, the daily summary runs as a cron job
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: BUSINESS_NAME
+        sync: false            # your printery's name, shown in the app and in SMS to schools
+      - key: SMS_PROVIDER
+        value: console         # change to "africastalking" once AT_API_KEY is set
+      - key: AT_USERNAME
+        value: sandbox
+      - key: AT_API_KEY
+        sync: false
+      - key: AT_SENDER_ID
+        sync: false
+      - key: OWNER_PHONE
+        sync: false
+      - key: SMS_WEBHOOK_TOKEN
+        generateValue: true
+      - key: MOMO_WEBHOOK_TOKEN
+        generateValue: true
+
+databases:
+  - name: printery-db
+    plan: basic-256mb
+    region: frankfurt
+    databaseName: printery
+    user: printery
+
+services:
+  # Django API, admin and photos
+  - type: web
+    name: exam-printery-api
+    runtime: python
+    region: frankfurt
+    plan: starter              # paid: needed for the photo disk and private network
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    preDeployCommand: python manage.py migrate --noinput && python manage.py ensure_owner
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60
+    healthCheckPath: /api/health/
+    disk:
+      name: printery-media
+      mountPath: /var/data
+      sizeGB: 2
+    envVars:
+      - fromGroup: printery-settings
+      - key: DATABASE_URL
+        fromDatabase:
+          name: printery-db
+          property: connectionString
+      - key: MEDIA_ROOT
+        value: /var/data/media
+      - key: OWNER_USERNAME
+        sync: false            # the owner's login name, created on the first deploy
+      - key: OWNER_PASSWORD
+        sync: false            # at least 8 characters; change it after first sign-in if you like
+
+  # Next.js phone app: the address everyone opens
+  - type: web
+    name: exam-printery-app
+    runtime: node
+    region: frankfurt
+    plan: starter
+    rootDir: frontend
+    buildCommand: npm ci && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public
+    startCommand: HOSTNAME=0.0.0.0 node .next/standalone/server.js
+    envVars:
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: BACKEND_HOSTPORT
+        fromService:
+          type: web
+          name: exam-printery-api
+          property: hostport
+
+  # Owner's daily SMS summary at 20:37 Kampala time (17:37 UTC)
+  - type: cron
+    name: exam-printery-daily-summary
+    runtime: python
+    region: frankfurt
+    plan: starter
+    schedule: "37 17 * * *"
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py send_daily_summary
+    envVars:
+      - fromGroup: printery-settings
+      - key: DATABASE_URL
+        fromDatabase:
+          name: printery-db
+          property: connectionString

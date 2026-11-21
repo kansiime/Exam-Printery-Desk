@@ -24,6 +24,23 @@ from .services import Ledger, audit, weekly_schools
 from .tasks import send_visit_confirmation
 
 
+# ---------- health and photos ----------
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def health(request):
+    from django.db import connection
+    connection.ensure_connection()
+    return Response({"ok": True})
+
+
+def protected_media(request, path):
+    from django.http import HttpResponseForbidden
+    from django.views.static import serve
+    if not request.user.is_authenticated:
+        return HttpResponseForbidden("Sign in to see photos.")
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
 # ---------- auth ----------
 class LoginThrottle(ScopedRateThrottle):
     scope = "login"

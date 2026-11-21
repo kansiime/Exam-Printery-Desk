@@ -1,7 +1,5 @@
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from printery import views as v
@@ -25,6 +23,7 @@ router.register("momo", v.MomoViewSet, basename="momo")
 router.register("corrections", v.CorrectionViewSet, basename="correction")
 
 api = [
+    path("health/", v.health),
     path("auth/csrf/", v.csrf),
     path("auth/login/", v.login_view),
     path("auth/logout/", v.logout_view),
@@ -46,4 +45,6 @@ api = [
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(api)),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Meter and delivery-note photos: only signed-in staff can open them.
+    re_path(r"^media/(?P<path>.+)$", v.protected_media),
+]

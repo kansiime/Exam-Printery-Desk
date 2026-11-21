@@ -1,6 +1,8 @@
 /** In development, Next.js forwards API, admin and media requests to Django so the
  *  browser sees one site and the login cookie works. In production nginx does this. */
-const backend = process.env.BACKEND_URL || "http://localhost:8000";
+// On Render the backend is reached over Render's private network (BACKEND_HOSTPORT = "name:port").
+const backend = process.env.BACKEND_URL
+  || (process.env.BACKEND_HOSTPORT ? `http://${process.env.BACKEND_HOSTPORT}` : "http://localhost:8000");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
