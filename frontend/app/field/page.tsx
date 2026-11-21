@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { fmt, today, ugx, when } from "@/lib/format";
 import { discard, flush, listPending, submitVisit } from "@/lib/outbox";
 import { useData } from "@/lib/session";
+import { CloseMyDay } from "@/components/DayClose";
 
 type Holding = { exam: number; name: string; qty: number; price: number; numbered: boolean };
 type Issue = { id: number; exam_name: string; qty: number; created_at: string; by: string };
@@ -80,6 +81,8 @@ function FieldScreen() {
         </section>
       )}
 
+      <CloseMyDay onDone={reload} />
+
       {s && !s.holding_by_exam.length ? <EmptyCard icon="box">You hold no copies right now. Ask the store keeper to issue some, then accept them here to start recording school visits.</EmptyCard> :
       <VisitForm holding={s?.holding_by_exam ?? []} schools={schools.data ?? []} onSaved={(how) => { toast(how === "sent" ? "Visit saved" : "No network. Visit saved on your phone and will send later."); reload(); refreshOutbox(); }} />}
 
@@ -127,7 +130,11 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
             "new_school.phone": f.get("ns_phone"), "new_school.candidates": f.get("ns_candidates") || 0 });
         } else values.school = schoolId;
         let how: "sent" | "queued" = "sent";
-        const ok = await run(async () => { how = await submitVisit(values, photo); });
+        const ok = await run(async () => {
+          const pos = await where();
+          if (pos) { values.latitude = pos.lat; values.longitude = pos.lng; }
+          how = await submitVisit(values, photo);
+        });
         if (ok) { setCopies(""); setPaid("0"); setPhoto(null); setSchoolId(""); setMethod("cash"); setFormKey((k) => k + 1); onSaved(how); }
       }}>
         <div className="grid2">
@@ -177,8 +184,21 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
           <div>Total<b>{fmt(total)}</b></div><div>Paid<b>{fmt(Number(paid || 0))}</b></div>
           <div>Owes<b style={{ color: owes > 0 ? "var(--bad)" : "var(--good)" }}>{fmt(Math.max(owes, 0))}</b></div>
         </div>
+        <p className="mini" style={{ margin: 0 }}>Your location is saved with the visit. Allow location if your phone asks.</p>
         <div><button disabled={busy || !holding.length}>Save visit</button></div>
       </form>
     </section>
   );
+}
+
+/** The phone's location when the visit is saved, so the owner can see it was recorded at the school. */
+function where(): Promise<{ lat: string; lng: string } | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude.toFixed(6), lng: p.coords.longitude.toFixed(6) }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 },
+    );
+  });
 }

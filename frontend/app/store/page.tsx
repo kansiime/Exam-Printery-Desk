@@ -5,6 +5,7 @@ import { CancelOrReport, DataTable, EmptyCard, ErrorNote, Feed, PageHead, Pill, 
 import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { useData } from "@/lib/session";
+import { DayClosesToConfirm } from "@/components/DayClose";
 
 type StoreExam = { id: number; name: string; numbered: boolean; counted: number | null; issued: number; returned: number; in_store: number; to_count: boolean; printed_at: string | null };
 type Summary = { printing: { exam: string; started_at: string; printer: string }[]; exams: StoreExam[]; sales: { id: number; name: string; cash_held: number; holding: Record<string, number> }[] };
@@ -48,6 +49,7 @@ function Store() {
         <IssueForm exams={exams.filter((e) => e.in_store > 0)} sales={sales} onDone={reload} />
         <ReturnForm exams={exams} sales={sales} onDone={reload} />
       </div>
+      <DayClosesToConfirm />
       <section className="block">
         <h3>Stock</h3>
         <DataTable<StoreExam> rows={exams.filter((e) => e.counted != null)} rowKey={(e) => e.id} empty="No stock yet."

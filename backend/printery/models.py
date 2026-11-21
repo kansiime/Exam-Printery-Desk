@@ -59,6 +59,8 @@ class Exam(Cancellable):
     numbered = models.BooleanField(default=True, help_text="Copies carry serial numbers")
     note = models.CharField(max_length=300, blank=True)
     exam_date = models.DateField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True, help_text="Closed exams are locked: no more printing, issuing or selling")
+    closed_by = models.ForeignKey(USER, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     history = HistoricalRecords()
 
     def __str__(self):
@@ -115,6 +117,8 @@ class School(Base):
     contact = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     candidates = models.PositiveIntegerField(default=0)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Set from the first visit with GPS")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     merged_into = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     history = HistoricalRecords()
 
@@ -329,3 +333,61 @@ class Notification(models.Model):
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["recipient", "read_at"])]
         constraints = [models.UniqueConstraint(fields=["recipient", "key"], condition=~models.Q(key=""), name="one_notification_per_key")]
+
+
+class DayClose(Base):
+    """A sales person's end-of-day count: copies and cash they say they have, against the system."""
+
+    sales = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="day_closes")
+    date = models.DateField()
+    copies_declared = models.JSONField(default=dict, help_text="{exam_id: copies in hand}")
+    copies_expected = models.JSONField(default=dict)
+    cash_declared = models.IntegerField(default=0)
+    cash_expected = models.IntegerField(default=0)
+    note = models.CharField(max_length=300, blank=True)
+    confirmed_by = models.ForeignKey(USER, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    store_result = models.CharField(max_length=10, blank=True, help_text="match / mismatch")
+    store_note = models.CharField(max_length=300, blank=True)
+    history = HistoricalRecords()
+
+    class Meta(Base.Meta):
+        constraints = [models.UniqueConstraint(fields=["sales", "date"], name="one_close_per_day")]
+
+    @property
+    def copy_gaps(self):
+        keys = set(self.copies_declared) | set(self.copies_expected)
+        return {k: int(self.copies_declared.get(k, 0)) - int(self.copies_expected.get(k, 0)) for k in keys
+                if int(self.copies_declared.get(k, 0)) != int(self.copies_expected.get(k, 0))}
+
+    @property
+    def cash_gap(self):
+        return self.cash_declared - self.cash_expected
+
+
+class PushSubscription(models.Model):
+    """A phone that agreed to get alerts while the app is closed (Web Push)."""
+
+    user = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField(max_length=600, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CopyScan(models.Model):
+    """Someone scanned the QR code on a copy to check it is genuine."""
+
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="scans")
+    serial = models.PositiveIntegerField()
+    result = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+
+
+class PushKeys(models.Model):
+    """The server's Web Push key pair, made automatically on first use (unless set in the environment)."""
+
+    public_key = models.CharField(max_length=200)
+    private_key = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)

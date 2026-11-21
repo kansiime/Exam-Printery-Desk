@@ -45,7 +45,8 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   }
   let res: Response;
   try {
-    res = await fetch("/api/" + path.replace(/^\/+|\/+$/g, "") + "/", { method, headers, body, credentials: "same-origin" });
+    const [route, query] = path.split("?");
+    res = await fetch("/api/" + route.replace(/^\/+|\/+$/g, "") + "/" + (query ? "?" + query : ""), { method, headers, body, credentials: "same-origin" });
   } catch {
     throw new OfflineError("No connection. Check your network and try again.");
   }

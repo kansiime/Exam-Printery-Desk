@@ -6,7 +6,7 @@ import { api, toForm } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
 
-type Exam = { id: number; name: string; ordered_qty: number; pages: number; sides: number; numbered: boolean; note: string; created_at: string };
+type Exam = { id: number; name: string; ordered_qty: number; pages: number; sides: number; numbered: boolean; note: string; created_at: string; closed_at: string | null };
 type Run = { id: number; exam: number; exam_name: string; machine: string; meter_before: number; meter_after: number | null; qty: number | null; started_at: string; done_at: string | null; by: string; created_by: number | null; photo_before: string | null; photo_after: string | null };
 type Other = { id: number; description: string; machine: string; meter_before: number; meter_after: number; created_at: string };
 
@@ -20,7 +20,7 @@ function Printing({ me }: { me: Me }) {
   const others = useData<Other[]>("other-prints");
   const reload = () => { exams.reload(); runs.reload(); others.reload(); };
   const done = new Set((runs.data ?? []).filter((r) => r.done_at).map((r) => r.exam));
-  const todo = (exams.data ?? []).filter((e) => !done.has(e.id));
+  const todo = (exams.data ?? []).filter((e) => !done.has(e.id) && !e.closed_at);
   const recent: { key: string; at: string | null; text: React.ReactNode; act: React.ReactNode }[] = [
     ...(runs.data ?? []).filter((r) => r.done_at).map((r) => ({ key: "p" + r.id, at: r.done_at, text: <><b>{fmt(r.qty)}</b> copies · {r.exam_name} · meter {fmt(r.meter_before)} → {fmt(r.meter_after)} · by {r.by}<span className="nphotos" style={{ marginTop: 6 }}>{[r.photo_before, r.photo_after].filter(Boolean).map((p) => <a key={p!} href={p!} target="_blank" rel="noopener"><img src={p!} alt="Meter photo" /></a>)}</span></>, act: <CancelOrReport type="print" id={r.id} onDone={reload} /> })),
     ...(others.data ?? []).map((o) => ({ key: "o" + o.id, at: o.created_at, text: <>Other printing: {o.description} · meter {fmt(o.meter_before)} → {fmt(o.meter_after)}</>, act: <CancelOrReport type="other" id={o.id} onDone={reload} /> })),
@@ -33,6 +33,7 @@ function Printing({ me }: { me: Me }) {
       {todo.length ? todo.map((e) => <Ticket key={e.id} exam={e} me={me} run={(runs.data ?? []).find((r) => r.exam === e.id && !r.done_at)} onDone={reload} />)
         : <EmptyCard icon="printer">Nothing to print right now. New orders from the owner appear here.</EmptyCard>}
       <OtherPrinting onDone={reload} />
+      <a className="panel" href="/owner/qr" style={{ textDecoration: "none", color: "inherit" }}><b>QR code stickers</b><span className="sub">Print a sheet of QR stickers for numbered copies, so schools can check a copy is genuine.</span></a>
       <section className="panel"><h3>Recently printed</h3><Feed items={recent} empty="Nothing printed yet." /></section>
     </>
   );

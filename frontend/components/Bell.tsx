@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { askSystemNotifications, ring, setSoundOn, soundOn, systemNotify, unlockSound } from "@/lib/alert";
 import { when } from "@/lib/format";
+import { pushStatus, turnOffPush, turnOnPush } from "@/lib/push";
 import { Icon } from "./icons";
+import { useToast } from "./ui";
 
 type Note = { id: number; level: "info" | "action" | "urgent"; title: string; body: string; link: string; photos: string[]; created_at: string; read: boolean };
 
@@ -14,12 +16,14 @@ const LEVEL_CLS = { urgent: "n-urgent", action: "n-action", info: "n-info" } as 
 /** Bell with unread count. New notifications ring loudly, vibrate and pop up on screen. */
 export function Bell() {
   const router = useRouter();
+  const toast = useToast();
   const [items, setItems] = useState<Note[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [popup, setPopup] = useState<Note[]>([]);
   const [sound, setSound] = useState(true);
   const [needsTap, setNeedsTap] = useState(false);
+  const [push, setPush] = useState<string>("unsupported");
   const lastId = useRef<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -53,6 +57,7 @@ export function Bell() {
 
   useEffect(() => {
     setSound(soundOn());
+    pushStatus().then(setPush).catch(() => undefined);
     const tap = () => { unlockSound(); setNeedsTap(false); };
     document.addEventListener("pointerdown", tap, { once: true });
     setNeedsTap(true);
@@ -88,6 +93,15 @@ export function Bell() {
             {unread > 0 && <button type="button" className="plain" onClick={() => markRead()}>Mark all read</button>}
           </div>
           {needsTap && sound && <p className="mini" style={{ padding: "0 14px" }}>Tap anywhere once so your phone allows the alert sound.</p>}
+          {push !== "unsupported" && push !== "not-set-up" && (
+            <div className="row" style={{ padding: "8px 14px", borderBottom: "1px solid var(--line)" }}>
+              <span className="mini grow">{push === "on" ? "Alerts also come when the app is closed." : push === "blocked" ? "Notifications are blocked in this browser's settings." : "Get alerts even when the app is closed."}</span>
+              {push !== "blocked" && <button type="button" className="ghost" onClick={async () => {
+                try { if (push === "on") { await turnOffPush(); setPush("off"); } else { await turnOnPush(); setPush("on"); } }
+                catch (e: any) { toast(e.message); }
+              }}>{push === "on" ? "Turn off" : "Turn on"}</button>}
+            </div>
+          )}
           <div className="nlist">
             {items.length ? items.map((n) => (
               <button type="button" key={n.id} className={`nitem ${LEVEL_CLS[n.level]} ${n.read ? "" : "unread"}`} onClick={() => go(n)}>

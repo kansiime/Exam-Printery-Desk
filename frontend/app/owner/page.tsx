@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { Me, needsName, useData } from "@/lib/session";
 
-type ExamRow = { id: number; name: string; ordered_qty: number; price: number; created_at: string; printed: number | null; counted: number | null;
+type ExamRow = { id: number; closed: boolean; name: string; ordered_qty: number; price: number; created_at: string; printed: number | null; counted: number | null;
   in_store: number; with_sales: number; sold: number; collected: number; debt: number; status: string };
 type SalesRow = { id: number; name: string; issued: number; sold: number; returned: number; holding: number; cash_collected: number; handed: number; cash_held: number; debt: number };
 type Pending = { id: number; school_name: string; exam_name: string; copies: number; price: number; price_reason: string; sales_name: string; exam: number };
@@ -98,7 +98,7 @@ function OverviewScreen({ me }: { me: Me }) {
         <p className="sub">Ordered, printed and store count should match. Red means they don&apos;t.</p>
         <DataTable<ExamRow> rows={d?.exams ?? []} rowKey={(e) => e.id} empty="No exams yet. Open “New print order” above to post your first one."
           columns={[
-            { label: "Exam", cell: (e) => <><b>{e.name}</b> <Pill cls={STATUS_CLS[e.status] ?? "p-done"}>{e.status}</Pill><br /><span className="mini">{when(e.created_at)} · UGX {fmt(e.price)} per copy</span></> },
+            { label: "Exam", cell: (e) => <><b>{e.name}</b> <Pill cls={e.closed ? "p-done" : STATUS_CLS[e.status] ?? "p-done"}>{e.closed ? "Closed" : e.status}</Pill><br /><span className="mini">{when(e.created_at)} · UGX {fmt(e.price)} per copy</span></> },
             { label: "Ordered", cell: (e) => fmt(e.ordered_qty) },
             { label: "Printed", cell: (e) => fmt(e.printed), bad: (e) => e.printed != null && e.printed < e.ordered_qty },
             { label: "Store count", cell: (e) => fmt(e.counted), bad: (e) => e.printed != null && e.counted != null && e.counted !== e.printed },
@@ -107,7 +107,12 @@ function OverviewScreen({ me }: { me: Me }) {
             { label: "Sold", cell: (e) => fmt(e.sold) },
             { label: "Collected", cell: (e) => fmt(e.collected) },
             { label: "Debt", cell: (e) => fmt(e.debt), bad: (e) => e.debt > 0 },
-            { label: "", cell: (e) => <CancelOrReport type="exam" id={e.id} onDone={ov.reload} /> },
+            { label: "", cell: (e) => <span className="row" style={{ justifyContent: "flex-end" }}>
+                <button type="button" className="ghost" disabled={busy} onClick={() => run(async () => {
+                  const r = await api<{ in_store: number; with_sales: number }>(`exams/${e.id}/close`, { body: e.closed ? { reopen: true } : {} });
+                  if (!e.closed && (r.in_store || r.with_sales)) throw new Error(`Closed. Note: ${fmt(r.in_store)} copies still in store and ${fmt(r.with_sales)} with sales people.`);
+                }, e.closed ? "Exam reopened" : "Exam closed and locked").then(ov.reload)}>{e.closed ? "Reopen" : "Close exam"}</button>
+                {!e.closed && <CancelOrReport type="exam" id={e.id} onDone={ov.reload} />}</span> },
           ]} />
       </section>
 

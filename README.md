@@ -116,6 +116,32 @@ Everyone gets in-app notifications for their part of the work, with a loud alarm
 
 The app checks for news every 20 seconds while it is open, and screens refresh by themselves. Phones only allow sound after the first tap on the page. With the browser allowed to show notifications, they also appear when the app is in the background. When the app is fully closed nothing rings; that needs Web Push (a possible next step) or SMS.
 
+## Automatic reminders
+
+| Stuck work | Reminder |
+|---|---|
+| Printing started, not posted | Printer after 3 hours, owner after 6 (urgent) |
+| Printed, not counted | Store keepers after 24 hours, owner after 48 |
+| Issued copies not accepted | Sales person after 24 hours, owner and store keeper after 48 |
+| Cash held more than 2 days | The person holding it and the owner, once a day |
+| Promised payment date passed | Sales person and owner, once a week |
+| Day not closed | Sales person from 19:00, owner from 21:00 |
+| Exam a week past its date with copies still out | Owner: collect them and close the exam |
+
+Reminders run every few minutes while anyone has the app open. To run them even when nobody does, add a scheduled job: `python manage.py run_reminders` (for example a Render Cron Job every 30 minutes).
+
+## End-of-day closing and closing exams
+
+Each evening every sales person taps **Close my day** and types the copies and cash they physically have. The system compares this with its records and alerts the owner to any gap. The store keeper then confirms it matches (or not) on the Store screen.
+
+When an exam is finished, the owner taps **Close exam** on the Overview. Its records are locked: no more printing, issuing, selling or cancelling until the owner reopens it. Schools can still pay their debts.
+
+## GPS, QR codes and alerts when the app is closed
+
+- **GPS:** each school visit saves the phone's location. The first visit fixes where the school is; later visits recorded more than 5 km away are flagged, and visits without location are listed.
+- **QR codes:** on **QR stickers** (owner and printer), make a sheet of stickers for an exam's serial numbers and print it on sticker paper, one per copy. Anyone scanning a copy sees whether it is genuine and which school it was sold to. A copy that was never sold, was printed beyond the count, or has a fake code alerts the owner immediately.
+- **Alerts when the app is closed:** in the bell menu, tap **Turn on**. Android phones: works in Chrome. iPhones: first add the app to the Home Screen (Share → Add to Home Screen), open it from there, then turn alerts on. The server makes its own push keys; to use fixed keys set `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (`python manage.py generate_vapid_keys`).
+
 ## Several people in a role
 
 Any number of printers, store keepers and sales people can work at once. Each record shows who made it. Only the printer who started a job (or the owner) can post its count. Cash is tracked per store keeper as well as per sales person.

@@ -1,13 +1,15 @@
 """Who gets told what. Every event in the printery creates in-app notifications;
 the phone app polls for them and rings."""
 import hashlib
+import json
 import logging
+import threading
 
 from django.db import IntegrityError, transaction
 
 from accounts.models import User
 
-from .models import Notification
+from .models import Notification, PushSubscription
 
 log = logging.getLogger(__name__)
 OWNER, PRINTER, STORE, SALES = User.Role.OWNER, User.Role.PRINTER, User.Role.STORE, User.Role.SALES
@@ -31,8 +33,37 @@ def tell(recipients, title, body="", link="", level=Notification.Level.INFO, pho
                     Notification.objects.create(recipient=user, level=level, title=title[:200], body=body, link=link,
                                                 photos=[p for p in (photos or []) if p], key=key)
             except IntegrityError:
-                pass  # this person already has this warning
+                continue  # this person already has this warning
+            push(user, title, body, link, level)
     transaction.on_commit(write)
+
+
+def push(user, title, body, link, level):
+    """Also alert the person's phones while the app is closed (Web Push), in the background."""
+    from django.conf import settings
+
+    from .extras import vapid_keys
+    subs = list(PushSubscription.objects.filter(user=user))
+    if not subs:
+        return
+    private_key = vapid_keys()[1]
+    payload = json.dumps({"title": title[:120], "body": body[:240], "link": link or "/", "level": str(level)})
+
+    def send():
+        from pywebpush import WebPushException, webpush
+        for s in subs:
+            try:
+                webpush({"endpoint": s.endpoint, "keys": {"p256dh": s.p256dh, "auth": s.auth}}, payload,
+                        vapid_private_key=private_key, vapid_claims={"sub": settings.VAPID_SUBJECT}, ttl=86400,
+                        headers={"Urgency": "high" if str(level) == "urgent" else "normal"})
+            except WebPushException as e:
+                if getattr(e, "response", None) is not None and e.response.status_code in (404, 410):
+                    PushSubscription.objects.filter(pk=s.pk).delete()  # phone unsubscribed
+                else:
+                    log.warning("push to %s failed: %s", user, e)
+            except Exception:
+                log.exception("push failed")
+    threading.Thread(target=send, daemon=True).start()
 
 
 def tell_roles(roles, *args, **kwargs):
@@ -55,10 +86,12 @@ def check_findings():
             for owner in owners:
                 try:
                     with transaction.atomic():
-                        Notification.objects.get_or_create(recipient=owner, key=key, defaults={
+                        _, created = Notification.objects.get_or_create(recipient=owner, key=key, defaults={
                             "level": Notification.Level.URGENT, "title": "Fraud warning", "body": f["text"], "link": "/owner/fraud"})
                 except IntegrityError:
-                    pass
+                    continue
+                if created:
+                    push(owner, "Fraud warning", f["text"], "/owner/fraud", "urgent")
     transaction.on_commit(run)
 
 

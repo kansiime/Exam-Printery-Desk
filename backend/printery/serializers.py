@@ -31,6 +31,11 @@ def check_serials(exam, text, qty):
         raise serializers.ValidationError({"serials": f"You entered {len(nums)} serial numbers for {qty} copies."})
 
 
+def not_closed(exam):
+    if exam.closed_at:
+        raise serializers.ValidationError(f"{exam.name} is closed, so its records are locked. The owner can reopen it.")
+
+
 def momo_id_used(tx):
     tx = tx.strip().upper()
     return Visit.objects.filter(momo_id__iexact=tx).exists() or Payment.objects.filter(momo_id__iexact=tx).exists()
@@ -66,7 +71,8 @@ class UserSerializer(serializers.ModelSerializer):
 class ExamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exam
-        fields = ["id", "name", "ordered_qty", "price", "pages", "sides", "numbered", "note", "exam_date", "created_at"]
+        fields = ["id", "name", "ordered_qty", "price", "pages", "sides", "numbered", "note", "exam_date", "created_at", "closed_at"]
+        read_only_fields = ["closed_at"]
 
 
 class PrintStartSerializer(serializers.ModelSerializer):
@@ -76,6 +82,7 @@ class PrintStartSerializer(serializers.ModelSerializer):
         read_only_fields = ["started_at"]
 
     def validate(self, data):
+        not_closed(data["exam"])
         if PrintRun.objects.filter(exam=data["exam"]).exists():
             raise serializers.ValidationError("This exam has already been started. Cancel the old run first.")
         if not data.get("photo_before"):
@@ -92,6 +99,7 @@ class PrintFinishSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if self.instance.done_at:
             raise serializers.ValidationError("This printing is already posted.")
+        not_closed(self.instance.exam)
         if data["meter_after"] < self.instance.meter_before:
             raise serializers.ValidationError({"meter_after": f"The reading after can't be lower than before ({self.instance.meter_before:,})."})
         if not data.get("photo_after"):
@@ -129,6 +137,7 @@ class ReceiptSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         exam = data["exam"]
+        not_closed(exam)
         if not PrintRun.objects.filter(exam=exam, done_at__isnull=False).exists():
             raise serializers.ValidationError("The printer has not posted this exam yet.")
         if StoreReceipt.objects.filter(exam=exam).exists():
@@ -170,6 +179,7 @@ class IssueSerializer(serializers.ModelSerializer):
         read_only_fields = ["accepted_at"]
 
     def validate(self, data):
+        not_closed(data["exam"])
         if data["sales"].role != User.Role.SALES:
             raise serializers.ValidationError("Copies can only be issued to a sales person.")
         stats = Ledger().exam_stats(data["exam"])
@@ -188,6 +198,7 @@ class ReturnSerializer(serializers.ModelSerializer):
         fields = ["id", "exam", "exam_name", "sales", "sales_name", "qty", "serials", "created_at"]
 
     def validate(self, data):
+        not_closed(data["exam"])
         holding = Ledger().sales_stats(data["sales"].id)["per_exam"].get(data["exam"].id, 0)
         if data["qty"] > holding:
             raise serializers.ValidationError(f"{data['sales'].display_name} holds only {holding:,} copies of this exam.")
@@ -219,6 +230,7 @@ class VisitSerializer(serializers.ModelSerializer):
     def validate(self, data):
         user = self.context["request"].user
         exam = data["exam"]
+        not_closed(exam)
         if not data.get("school") and not data.get("new_school"):
             raise serializers.ValidationError({"school": "Choose the school, or add a new one."})
         holding = Ledger().sales_stats(user.id)["per_exam"].get(exam.id, 0)
@@ -250,6 +262,11 @@ class VisitSerializer(serializers.ModelSerializer):
         data["momo_id"] = data.get("momo_id", "").strip().upper() if data.get("method") == Method.MOMO else ""
         data["note_no"] = data["note_no"].strip()
         data["price_status"] = Visit.PriceStatus.PENDING if data["price"] < data["exam"].price else Visit.PriceStatus.OK
+        school = data["school"]
+        if data.get("latitude") is not None and school.latitude is None:
+            # The first visit with GPS fixes where the school is; later visits are checked against it.
+            school.latitude, school.longitude = data["latitude"], data["longitude"]
+            school.save(update_fields=["latitude", "longitude"])
         return super().create(data)
 
 

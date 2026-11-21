@@ -145,7 +145,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "password_reset": "10/hour"},
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "password_reset": "10/hour", "verify": "60/min"},
     # The clickable API browser is for development only.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"]
     + (["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
@@ -171,6 +171,11 @@ AT_SENDER_ID = env("AT_SENDER_ID", "")
 OWNER_PHONE = env("OWNER_PHONE", "")
 SMS_WEBHOOK_TOKEN = env("SMS_WEBHOOK_TOKEN", "")
 MOMO_WEBHOOK_TOKEN = env("MOMO_WEBHOOK_TOKEN", "")
+
+# Phone alerts when the app is closed (Web Push). Make keys with: python manage.py generate_vapid_keys
+VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT = env("VAPID_SUBJECT", "mailto:admin@example.com")
 
 LOGGING = {
     "version": 1,

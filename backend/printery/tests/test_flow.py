@@ -59,6 +59,8 @@ def sell(api, exam, **over):
             "new_school.candidates": 40, "date": "2026-11-20", "copies": 30, "price": 2000, "paid": 40000, "method": "cash",
             "note_no": "0012", "note_photo": photo("note.jpg"), "serials": "1-30"}
     data.update(over)
+    if "school" in over:  # an existing school: don't also send a new one
+        data = {k: v for k, v in data.items() if not k.startswith("new_school.")}
     return api["sales"].post("/api/visits/", data, format="multipart")
 
 

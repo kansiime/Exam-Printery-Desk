@@ -20,6 +20,7 @@ const TABS: Record<Me["role"], Tab[]> = {
     { href: "/cash", label: "Cash", short: "Cash", icon: "coins" },
     { href: "/owner/schools", label: "Schools", short: "Schools", icon: "school" },
     { href: "/owner/team", label: "Team", short: "Team", icon: "users" },
+    { href: "/owner/qr", label: "QR stickers", short: "QR", icon: "qr" },
   ],
   printer: [{ href: "/print", label: "Printing", short: "Printing", icon: "printer" }],
   store: [

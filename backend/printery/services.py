@@ -176,7 +176,7 @@ class Ledger:
     # ---- summaries ----
     def overview(self):
         exams = sorted(self.exams.values(), key=lambda e: e.created_at, reverse=True)
-        rows = [{"id": e.id, "name": e.name, "ordered_qty": e.ordered_qty, "price": e.price, "pages": e.pages,
+        rows = [{"id": e.id, "name": e.name, "closed": bool(e.closed_at), "ordered_qty": e.ordered_qty, "price": e.price, "pages": e.pages,
                  "created_at": e.created_at, **self.exam_stats(e)} for e in exams]
         sales = [{"id": u.id, "name": u.display_name, **{k: v for k, v in self.sales_stats(u.id).items() if k != "per_exam"}}
                  for u in self.sales_people()]
@@ -375,7 +375,20 @@ def audit(ledger=None):
                 warn.append(f"{s.name} has {s.candidates:,} candidates but bought only {c:,} copies of "
                             f"{L.exams[exam_id].name if exam_id in L.exams else 'an exam'}. It may be photocopying, or buying from someone else.")
 
-    # 12. Things waiting for the owner
+    # 12. GPS: sales recorded far from the school, or with no location
+    from .extras import km_between
+    no_gps = defaultdict(int)
+    for v in L.visits:
+        if v.latitude is None:
+            no_gps[v.sales_id] += 1
+        elif v.school.latitude is not None:
+            km = km_between(v.latitude, v.longitude, v.school.latitude, v.school.longitude)
+            if km > 5:
+                bad.append(f"{L.name(v.sales_id)} recorded the sale to {v.school.name} (delivery note {v.note_no}) {km:,.0f} km away from the school.")
+    for uid, n in no_gps.items():
+        warn.append(f"{L.name(uid)} recorded {n} sale(s) without location. Ask them to allow location on their phone.")
+
+    # 13. Things waiting for the owner
     pending = [v for v in L.visits if v.price_status == Visit.PriceStatus.PENDING]
     if pending:
         warn.append(f"{len(pending)} sale(s) below your set price are waiting for your approval.")

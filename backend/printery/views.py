@@ -437,6 +437,9 @@ def cancel_record(request):
     obj = model.objects.filter(pk=request.data.get("id")).first()
     if not obj:
         return Response({"detail": "That record is already cancelled or does not exist."}, status=404)
+    exam = obj if isinstance(obj, Exam) else getattr(obj, "exam", None) or getattr(getattr(obj, "visit", None), "exam", None)
+    if exam is not None and exam.closed_at:
+        return Response({"detail": f"{exam.name} is closed, so its records are locked. Reopen it first."}, status=400)
     obj.cancelled_at, obj.cancelled_by, obj.cancel_reason = timezone.now(), request.user, reason[:300]
     obj.save(update_fields=["cancelled_at", "cancelled_by", "cancel_reason"])
     CorrectionRequest.objects.filter(target_type=request.data.get("type"), target_id=obj.pk, resolved_at__isnull=True) \
@@ -529,7 +532,7 @@ def store_summary(request):
         exams.append({"id": e.id, "name": e.name, "numbered": e.numbered, "counted": st["counted"], "issued": st["issued"],
                       "returned": st["returned"], "in_store": st["in_store"],
                       # Blind count: the store keeper never sees the printer's figure.
-                      "to_count": bool(printed) and st["counted"] is None,
+                      "to_count": bool(printed) and st["counted"] is None and not e.closed_at, "closed": bool(e.closed_at),
                       "printed_at": printed.done_at if printed else None})
     sales = []
     for u in L.sales_people():
@@ -548,7 +551,7 @@ def field_summary(request):
     L = Ledger()
     st = L.sales_stats(request.user.id)
     holding = [{"exam": k, "name": L.exams[k].name, "qty": v, "price": L.exams[k].price, "numbered": L.exams[k].numbered}
-               for k, v in st["per_exam"].items() if v > 0 and k in L.exams]
+               for k, v in st["per_exam"].items() if v > 0 and k in L.exams and not L.exams[k].closed_at]
     pending = S.IssueSerializer(Issue.objects.filter(id__in=st["pending_issues"]).select_related("exam", "sales", "created_by"), many=True).data
     return Response({**{k: v for k, v in st.items() if k not in ("per_exam", "pending_issues")},
                      "holding_by_exam": holding, "pending_issues": pending})
@@ -637,6 +640,8 @@ def sms_inbound(request):
 # ---------- in-app notifications ----------
 @api_view(["GET"])
 def notifications(request):
+    from .reminders import maybe_run
+    maybe_run()
     qs = Notification.objects.filter(recipient=request.user)
     after = request.query_params.get("after")
     items = list((qs.filter(id__gt=after) if after and after.isdigit() else qs)[:50])

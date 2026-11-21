@@ -3,6 +3,7 @@ from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from accounts import passwords
+from printery import extras
 from printery import views as v
 
 router = DefaultRouter()
@@ -37,6 +38,14 @@ api = [
     path("users/<int:user_id>/reset-code/", passwords.give_code),
     path("notifications/", v.notifications),
     path("notifications/read/", v.notifications_read),
+    path("day-close/", extras.day_close),
+    path("day-close/<int:close_id>/confirm/", extras.confirm_close),
+    path("exams/<int:exam_id>/close/", extras.close_exam),
+    path("exams/<int:exam_id>/qr-codes/", extras.qr_codes),
+    path("verify/<int:exam_id>/<int:serial>/<str:sig>/", extras.verify_copy),
+    path("push/key/", extras.push_key),
+    path("push/subscribe/", extras.push_subscribe),
+    path("push/unsubscribe/", extras.push_unsubscribe),
     path("cancel/", v.cancel_record),
     path("cancelled/", v.cancelled_records),
     path("counts/", v.stock_counts),

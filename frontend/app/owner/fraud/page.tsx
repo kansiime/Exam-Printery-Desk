@@ -7,7 +7,7 @@ import { useData } from "@/lib/session";
 
 type MeterRow = { exam: string; exam_id: number; machine: string; qty: number; pages: number; meter_before: number; meter_after: number | null; meter_pages: number | null; expected: number; extra: number | null; photo_before: string | null; photo_after: string | null };
 type Weekly = { id: number; name: string; contact: string; copies: number; value: number; paid: number; sellers: string; serials: string };
-type Sale = { id: number; school_name: string; exam_name: string; note_no: string; copies: number; paid: number; method: string; momo_id: string; sales_name: string; note_photo: string | null; date: string };
+type Sale = { latitude: string | null; longitude: string | null; id: number; school_name: string; exam_name: string; note_no: string; copies: number; paid: number; method: string; momo_id: string; sales_name: string; note_photo: string | null; date: string };
 type Audit = { findings: { level: string; text: string }[]; meter: MeterRow[]; gaps: { machine: string; pages: number; after: string; before: string }[];
   paper: { issued: number; used: number; left: number }; momo: { statement_count: number; recorded_count: number; unmatched_statement: { id: number; tx_id: string; amount: number }[] };
   weekly_schools: Weekly[]; recent_sales: Sale[] };
@@ -78,6 +78,7 @@ function Fraud() {
             { label: "Paid", cell: (v) => fmt(v.paid) },
             { label: "How", cell: (v) => (v.method === "momo" ? <>Mobile money<br /><span className="mini">{v.momo_id}</span></> : v.method === "cash" ? "Cash" : "Not paid") },
             { label: "Sold by", cell: (v) => v.sales_name },
+            { label: "Where", cell: (v) => v.latitude ? <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noopener">Map</a> : <span className="mini" style={{ color: "var(--bad)" }}>No location</span> },
             { label: "Photo", cell: (v) => <Thumb src={v.note_photo} /> },
           ]} />
       </section>
