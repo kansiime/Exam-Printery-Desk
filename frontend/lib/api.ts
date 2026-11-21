@@ -52,7 +52,9 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     if (res.status === 403 && data?.detail?.includes("CSRF")) throw new ApiError(403, "Your session expired. Reload the page.");
-    const [msg, fields] = messageFrom(data);
+    let [msg, fields] = messageFrom(data);
+    // Not a normal answer from the backend: show the code so the cause can be found.
+    if (!data || typeof data !== "object") msg = `The app could not reach the server (error ${res.status}). Try again in a minute; if it keeps happening, tell the owner.`;
     throw new ApiError(res.status, res.status === 401 || res.status === 403 && !data ? "Please sign in again." : msg, fields);
   }
   return data as T;
