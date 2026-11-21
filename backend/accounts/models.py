@@ -23,3 +23,20 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.display_name} ({self.get_role_display()})"
+
+
+class PasswordResetCode(models.Model):
+    """A one-time code sent by SMS so a worker can set a new password.
+
+    Only a hash of the code is stored. Codes expire and lock after a few wrong tries.
+    """
+
+    MAX_ATTEMPTS = 5
+    LIFETIME_MINUTES = 15
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reset_codes")
+    code_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)

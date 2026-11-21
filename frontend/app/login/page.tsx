@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/icons";
@@ -37,7 +38,7 @@ export default function Login() {
         <label>Username<input id="username" autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
         <label>Password<input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <button disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-        <p className="mini" style={{ textAlign: "center", margin: 0 }}>Forgot your password? Ask the owner to set a new one.</p>
+        <p className="mini" style={{ textAlign: "center", margin: 0 }}><Link href="/forgot">Forgot your password?</Link></p>
       </form>
     </div>
   );

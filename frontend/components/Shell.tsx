@@ -50,7 +50,7 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
 
   if (!me) return <div className="loading">Loading…</div>;
   const tabs = TABS[me.role];
-  const current = tabs.find((t) => t.href === path);
+  const current = tabs.find((t) => t.href === path) ?? (path === "/account" ? { label: "My account" } : undefined);
   const phoneTabs = tabs.slice(0, PHONE_TABS);
   const extra = tabs.slice(PHONE_TABS);
 
@@ -105,6 +105,7 @@ function AccountMenu({ me, extra }: { me: Me; extra: Tab[] }) {
           {extra.map((t) => (
             <button key={t.href} type="button" className="plain extra-link" onClick={() => { setOpen(false); router.push(t.href); }}><Icon name={t.icon} />{t.label}</button>
           ))}
+          <button type="button" className="plain" onClick={() => { setOpen(false); router.push("/account"); }}><Icon name="user" />My account and password</button>
           <button type="button" className="plain" onClick={async () => {
             await api("auth/logout", { body: {} }).catch(() => undefined);
             setMe(null);

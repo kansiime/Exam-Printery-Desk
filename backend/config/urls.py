@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
+from accounts import passwords
 from printery import views as v
 
 router = DefaultRouter()
@@ -28,6 +29,9 @@ api = [
     path("auth/login/", v.login_view),
     path("auth/logout/", v.logout_view),
     path("auth/me/", v.me),
+    path("auth/password/forgot/", passwords.forgot),
+    path("auth/password/reset/", passwords.reset),
+    path("auth/password/change/", passwords.change),
     path("cancel/", v.cancel_record),
     path("cancelled/", v.cancelled_records),
     path("counts/", v.stock_counts),
