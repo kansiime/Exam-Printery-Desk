@@ -42,7 +42,17 @@ api = [
     path("", include(router.urls)),
 ]
 
+def backend_home(request):
+    from django.http import HttpResponse
+    return HttpResponse(
+        "<!doctype html><title>Exam Printery Desk backend</title>"
+        "<body style='font-family:system-ui;max-width:560px;margin:60px auto;padding:0 16px;line-height:1.5'>"
+        "<h1>This is the backend</h1><p>It stores the data and is working. Your team does not use this address.</p>"
+        "<p>Open the <b>frontend</b> (phone app) address to sign in. The owner can also use <a href='/admin/'>/admin/</a>.</p></body>")
+
+
 urlpatterns = [
+    path("", backend_home),
     path("admin/", admin.site.urls),
     path("api/", include(api)),
     # Meter and delivery-note photos: only signed-in staff can open them.
