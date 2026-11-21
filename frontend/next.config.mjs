@@ -16,6 +16,8 @@ const nextConfig = {
     ];
   },
   skipTrailingSlashRedirect: true,
+  // A sleeping free Render backend can take ~a minute to wake; wait instead of failing.
+  experimental: { proxyTimeout: 120_000 },
 };
 
 export default nextConfig;
