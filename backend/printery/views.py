@@ -536,7 +536,10 @@ def store_summary(request):
         st = L.sales_stats(u.id)
         sales.append({"id": u.id, "name": u.display_name, "cash_held": st["cash_held"],
                       "holding": {str(k): v for k, v in st["per_exam"].items() if v > 0}})
-    return Response({"exams": exams, "sales": sales, "store_cash": L.store_cash()})
+    # Started but not yet posted by the printer, so the store knows what's coming (no counts shown).
+    printing = [{"exam": L.exams[p.exam_id].name, "started_at": p.started_at, "printer": L.name(p.created_by_id)}
+                for p in L.prints if not p.done_at and p.exam_id in L.exams]
+    return Response({"exams": exams, "sales": sales, "store_cash": L.store_cash(), "printing": printing})
 
 
 @api_view(["GET"])

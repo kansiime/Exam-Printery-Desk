@@ -56,7 +56,7 @@ function Ticket({ exam, run, me, onDone }: { exam: Exam; run?: Run; me: Me; onDo
           e.preventDefault();
           const f = new FormData(e.currentTarget);
           if (!photo) return act(async () => { throw new Error("Take a photo of the meter first."); });
-          const ok = await act(() => api("prints", { form: toForm({ exam: exam.id, machine: f.get("machine"), meter_before: f.get("meter_before"), photo_before: photo }) }), "Started. Post the count when you finish.");
+          const ok = await act(() => api("prints", { form: toForm({ exam: exam.id, machine: f.get("machine"), meter_before: f.get("meter_before"), photo_before: photo }) }), "Started. When printing is finished, post the count (step 2).");
           if (ok) { setPhoto(null); onDone(); }
         }}>
           <div className="grid2">
@@ -64,6 +64,7 @@ function Ticket({ exam, run, me, onDone }: { exam: Exam; run?: Run; me: Me; onDo
             <label>Meter reading before printing<input name="meter_before" type="number" min={0} inputMode="numeric" required placeholder="Read it off the copier" /></label>
           </div>
           <PhotoInput id={`pb-${exam.id}`} label="Photo of the meter before" value={photo} onChange={setPhoto} />
+          <p className="mini" style={{ margin: 0 }}>Step 1 of 2. After printing you&apos;ll post the count, which sends the exam to the store.</p>
           <div><button disabled={busy}>Start printing</button></div>
         </form>
       ) : run.created_by && run.created_by !== me.id && me.role !== "owner" ? (
@@ -76,14 +77,15 @@ function Ticket({ exam, run, me, onDone }: { exam: Exam; run?: Run; me: Me; onDo
           const ok = await act(() => api(`prints/${run.id}/finish`, { form: toForm({ qty: f.get("qty"), spoilt: f.get("spoilt"), meter_after: f.get("meter_after"), photo_after: photo }) }), "Printed copies posted");
           if (ok) { setPhoto(null); onDone(); }
         }}>
-          <p className="mini">Started by {run.by || "you"} {when(run.started_at)} on {run.machine} · meter before {fmt(run.meter_before)}</p>
+          <div className="banner info" style={{ margin: 0 }}><b>Step 2 of 2: when printing is finished, post the count below.</b> The store can&apos;t fold and count until you do.<br />
+            <span className="mini">Started by {run.by || "you"} {when(run.started_at)} on {run.machine} · meter before {fmt(run.meter_before)}</span></div>
           <div className="grid3">
             <label>Good copies printed<input name="qty" type="number" min={0} inputMode="numeric" required defaultValue={exam.ordered_qty} /></label>
             <label>Spoilt sheets<input name="spoilt" type="number" min={0} inputMode="numeric" defaultValue={0} /></label>
             <label>Meter reading after<input name="meter_after" type="number" min={0} inputMode="numeric" required /></label>
           </div>
           <PhotoInput id={`pa-${exam.id}`} label="Photo of the meter after" value={photo} onChange={setPhoto} />
-          <div><button disabled={busy}>Post printed</button></div>
+          <div><button disabled={busy}>Post printed and send to store</button></div>
         </form>
       )}
     </div>

@@ -7,7 +7,7 @@ import { fmt, when } from "@/lib/format";
 import { useData } from "@/lib/session";
 
 type StoreExam = { id: number; name: string; numbered: boolean; counted: number | null; issued: number; returned: number; in_store: number; to_count: boolean; printed_at: string | null };
-type Summary = { exams: StoreExam[]; sales: { id: number; name: string; cash_held: number; holding: Record<string, number> }[] };
+type Summary = { printing: { exam: string; started_at: string; printer: string }[]; exams: StoreExam[]; sales: { id: number; name: string; cash_held: number; holding: Record<string, number> }[] };
 type Move = { id: number; exam_name: string; sales_name: string; qty: number; serials: string; created_at: string; accepted_at?: string | null };
 type Receipt = { id: number; exam_name: string; qty: number; serial_from: number | null; serial_to: number | null; created_at: string };
 
@@ -36,7 +36,13 @@ function Store() {
       <section className="block">
         <h3>1. Fold and count</h3>
         {exams.filter((e) => e.to_count).map((e) => <CountTicket key={e.id} exam={e} onDone={reload} />)}
-        {!exams.some((e) => e.to_count) && <EmptyCard icon="box">Nothing waiting to count. Exams appear here when the printer posts them.</EmptyCard>}
+        {!exams.some((e) => e.to_count) && <EmptyCard icon="box">Nothing waiting to count. Exams appear here when the printer taps “Post printed”.</EmptyCard>}
+        {!!sum.data?.printing.length && (
+          <div className="panel">
+            <h3>Being printed now</h3>
+            <Feed empty="" items={sum.data.printing.map((p, i) => ({ key: i, at: p.started_at, text: <><b>{p.exam}</b> · started by {p.printer}. It comes here once they post the count.</> }))} />
+          </div>
+        )}
       </section>
       <div className="split">
         <IssueForm exams={exams.filter((e) => e.in_store > 0)} sales={sales} onDone={reload} />
