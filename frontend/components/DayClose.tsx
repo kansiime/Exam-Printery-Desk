@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { fmt, ugx, when } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { useData } from "@/lib/session";
 import { Disclosure, Pill, useAction } from "./ui";
 
@@ -31,10 +32,11 @@ function Gaps({ c }: { c: CloseRow }) {
 export function CloseMyDay({ onDone }: { onDone?: () => void }) {
   const d = useData<Data>("day-close");
   const { busy, run } = useAction();
+  const { t } = useT();
   const mine = d.data?.mine;
   const today = mine?.today;
   return (
-    <Disclosure title={today ? "Today is closed" : "Close my day"} sub={today ? "You can correct it until the store keeper confirms" : "Count the copies and cash you have now"}
+    <Disclosure title={today ? "Today is closed" : t("Close my day")} sub={today ? "You can correct it until the store keeper confirms" : "Count the copies and cash you have now"}
       icon="check" primary={!today}>
       {today && <div className="row"><Status c={today} />{today.store_note && <span className="mini">{today.store_note}</span>}</div>}
       {today && <Gaps c={today} />}
@@ -54,7 +56,7 @@ export function CloseMyDay({ onDone }: { onDone?: () => void }) {
           {!mine?.holding.length && <p className="mini" style={{ margin: 0 }}>The system says you hold no copies. If you have some, tell the store keeper.</p>}
           <label>Cash in my hands (UGX)<input name="cash" type="number" min={0} inputMode="numeric" required /></label>
           <label>Note (optional)<input name="note" placeholder="e.g. one copy torn, returned tomorrow" /></label>
-          <div><button disabled={busy}>{today ? "Correct my close" : "Close my day"}</button></div>
+          <div><button disabled={busy}>{today ? "Correct my close" : t("Close my day")}</button></div>
         </form>
       )}
     </Disclosure>

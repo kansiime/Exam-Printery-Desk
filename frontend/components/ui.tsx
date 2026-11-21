@@ -3,6 +3,7 @@ import { createContext, useContext, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { shrinkPhoto, when } from "@/lib/format";
 import { useSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 import { Icon } from "./icons";
 
 // ---- toast ----
@@ -141,9 +142,10 @@ export function ErrorNote({ error }: { error: string }) {
 
 // ---- layout helpers ----
 export function PageHead({ title, sub, children }: { title: string; sub?: React.ReactNode; children?: React.ReactNode }) {
+  const { t } = useT();
   return (
     <div className="pagehead">
-      <div className="grow"><h1>{title}</h1>{sub && <p className="sub">{sub}</p>}</div>
+      <div className="grow"><h1>{t(title)}</h1>{sub && <p className="sub">{sub}</p>}</div>
       {children}
     </div>
   );
@@ -215,4 +217,10 @@ export function GiveResetCode({ userId, label = "Create reset code", onDone }: {
       <p className="mini" style={{ margin: 0 }}>{given.phone ? `WhatsApp opens a chat with ${given.phone}.` : "No phone number saved, so WhatsApp asks you to choose the contact."} Or read the code out to them.</p>
     </div>
   );
+}
+
+/** Translated text: <T>Start printing</T> shows the Luganda wording when Luganda is chosen. */
+export function T({ children }: { children: string }) {
+  const { t } = useT();
+  return <>{t(children)}</>;
 }

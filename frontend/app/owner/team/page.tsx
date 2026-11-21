@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
 
-type User = { id: number; username: string; first_name: string; last_name: string; name: string; role: string; phone: string; is_active: boolean };
+type User = { id: number; username: string; first_name: string; last_name: string; name: string; role: string; phone: string; is_active: boolean; commission_percent: string };
 
 export default function TeamPage() {
   return <Shell allow={["owner"]}>{(me) => <Team me={me} />}</Shell>;
@@ -62,7 +62,7 @@ function Member({ user: u, onSaved }: { user: User; onSaved: () => void }) {
     <div className="ticket">
       <div className="head" style={{ alignItems: "center" }}>
         <span className="avatar" aria-hidden="true">{initials.toUpperCase()}</span>
-        <div className="t"><h3>{u.name}</h3><p className="sub">{ROLE_LABEL[u.role]} · username <b>{u.username}</b>{u.phone ? ` · ${u.phone}` : ""}</p></div>
+        <div className="t"><h3>{u.name}</h3><p className="sub">{ROLE_LABEL[u.role]} · username <b>{u.username}</b>{u.phone ? ` · ${u.phone}` : ""}{Number(u.commission_percent) ? ` · ${Number(u.commission_percent)}% commission` : ""}</p></div>
         {!u.is_active && <Pill cls="p-done">Switched off</Pill>}
         <button type="button" className="ghost" onClick={() => setEdit((x) => !x)}>{edit ? "Close" : "Edit"}</button>
       </div>
@@ -71,7 +71,7 @@ function Member({ user: u, onSaved }: { user: User; onSaved: () => void }) {
         <form onSubmit={async (e) => {
           e.preventDefault();
           const f = new FormData(e.currentTarget);
-          const body: Record<string, unknown> = { first_name: f.get("first_name"), last_name: f.get("last_name"), phone: f.get("phone"), role: f.get("role"), is_active: f.get("active") === "1" };
+          const body: Record<string, unknown> = { first_name: f.get("first_name"), last_name: f.get("last_name"), phone: f.get("phone"), role: f.get("role"), is_active: f.get("active") === "1", commission_percent: f.get("commission") || 0 };
           if (f.get("password")) body.password = f.get("password");
           if (await run(() => api(`users/${u.id}`, { method: "PATCH", body }), "Saved")) { setEdit(false); onSaved(); }
         }}>
@@ -82,6 +82,7 @@ function Member({ user: u, onSaved }: { user: User; onSaved: () => void }) {
             <label>Phone<input name="phone" type="tel" defaultValue={u.phone} /></label>
             <label>Account<select name="active" defaultValue={u.is_active ? "1" : "0"}><option value="1">Active</option><option value="0">Switched off</option></select></label>
             <label>New password (optional)<input name="password" minLength={8} placeholder="Leave empty to keep" /></label>
+            <label>Commission on money collected (%)<input name="commission" type="number" min={0} max={100} step="0.5" inputMode="decimal" defaultValue={Number(u.commission_percent) || ""} placeholder="e.g. 10 (sales people)" /></label>
           </div>
           <div><button disabled={busy}>Save changes</button></div>
         </form>

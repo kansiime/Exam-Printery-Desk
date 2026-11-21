@@ -1,6 +1,6 @@
 "use client";
 import { Shell } from "@/components/Shell";
-import { EmptyCard, ErrorNote, Kpi, PageHead, Pill, useAction } from "@/components/ui";
+import { EmptyCard, ErrorNote, Kpi, PageHead, Pill, T, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, ugx, when } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
@@ -47,7 +47,7 @@ function DebtsScreen({ me }: { me: Me }) {
             <label>Amount received (UGX)<input name="amount" type="number" min={1} inputMode="numeric" required /></label>
             <label>Paid by<select name="method"><option value="cash">Cash</option><option value="momo">Mobile money (to business number)</option></select></label>
             <label>Mobile money ID (if mobile money)<input name="momo_id" placeholder="From the payment SMS" /></label>
-            <label>&nbsp;<button disabled={busy}>Record payment</button></label>
+            <label>&nbsp;<button disabled={busy}><T>Record payment</T></button></label>
           </form>
         </div>
       )) : <EmptyCard icon="check">No schools owe money right now.</EmptyCard>}

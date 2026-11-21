@@ -5,8 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useGuard, useSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 import { Bell } from "./Bell";
+import { Guide, useFirstTimeGuide } from "./Guide";
 import { Icon, Logo } from "./icons";
+import { useAction } from "./ui";
 
 type Tab = { href: string; label: string; short: string; icon: string };
 
@@ -19,8 +22,10 @@ const TABS: Record<Me["role"], Tab[]> = {
     { href: "/debts", label: "Debts", short: "Debts", icon: "receipt" },
     { href: "/cash", label: "Cash", short: "Cash", icon: "coins" },
     { href: "/owner/schools", label: "Schools", short: "Schools", icon: "school" },
+    { href: "/owner/reports", label: "Reports", short: "Reports", icon: "chart" },
     { href: "/owner/team", label: "Team", short: "Team", icon: "users" },
     { href: "/owner/qr", label: "QR stickers", short: "QR", icon: "qr" },
+    { href: "/owner/pilot", label: "Pilot week", short: "Pilot", icon: "check" },
   ],
   printer: [{ href: "/print", label: "Printing", short: "Printing", icon: "printer" }],
   store: [
@@ -40,6 +45,9 @@ const PHONE_TABS = 5;
 export function Shell({ allow, children }: { allow: Me["role"][]; children: (me: Me) => React.ReactNode }) {
   const me = useGuard(allow);
   const path = usePathname();
+  const { t } = useT();
+  const guide = useFirstTimeGuide(me);
+  const [feedback, setFeedback] = useState(false);
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -60,25 +68,27 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
     <div className="app">
       <nav className="side" aria-label="Main menu">
         <div className="brandmark"><span className="logo"><Logo /></span><div><b>{me.business}</b><small>Exam Printery Desk</small></div></div>
-        {tabs.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={path === t.href ? "page" : undefined}><Icon name={t.icon} />{t.label}</Link>
+        {tabs.map((tab) => (
+          <Link key={tab.href} href={tab.href} aria-current={path === tab.href ? "page" : undefined}><Icon name={tab.icon} />{t(tab.label)}</Link>
         ))}
       </nav>
 
       <header className="topbar">
-        <div className="brandmark"><span className="logo"><Logo /></span><div><b>{me.business}</b><small>{current?.label ?? ""}</small></div></div>
-        <span className="pagetitle">{current?.label}</span>
-        <div className="topactions"><Bell /><AccountMenu me={me} extra={extra} /></div>
+        <div className="brandmark"><span className="logo"><Logo /></span><div><b>{me.business}</b><small>{current ? t(current.label) : ""}</small></div></div>
+        <span className="pagetitle">{current ? t(current.label) : ""}</span>
+        <div className="topactions"><Bell /><AccountMenu me={me} extra={extra} onGuide={guide.show} onFeedback={() => setFeedback(true)} /></div>
       </header>
 
       {!online && <div className="offline">No network. You can keep working; changes that need the internet will wait.</div>}
 
       <main className="content">{children(me)}</main>
+      <Guide me={me} open={guide.open} onClose={guide.close} />
+      {feedback && <FeedbackDialog page={path} onClose={() => setFeedback(false)} />}
 
       {tabs.length > 1 && (
         <nav className="bottomnav" aria-label="Main menu">
-          {phoneTabs.map((t) => (
-            <Link key={t.href} href={t.href} aria-current={path === t.href ? "page" : undefined}><Icon name={t.icon} /><span>{t.short}</span></Link>
+          {phoneTabs.map((tab) => (
+            <Link key={tab.href} href={tab.href} aria-current={path === tab.href ? "page" : undefined}><Icon name={tab.icon} /><span>{t(tab.short)}</span></Link>
           ))}
         </nav>
       )}
@@ -86,7 +96,8 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
   );
 }
 
-function AccountMenu({ me, extra }: { me: Me; extra: Tab[] }) {
+function AccountMenu({ me, extra, onGuide, onFeedback }: { me: Me; extra: Tab[]; onGuide: () => void; onFeedback: () => void }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { setMe } = useSession();
@@ -104,17 +115,38 @@ function AccountMenu({ me, extra }: { me: Me; extra: Tab[] }) {
         <div className="menu" role="menu">
           <div className="who-name">{me.name}</div>
           <div className="who-role">{ROLE_LABEL[me.role]}</div>
-          {extra.map((t) => (
-            <button key={t.href} type="button" className="plain extra-link" onClick={() => { setOpen(false); router.push(t.href); }}><Icon name={t.icon} />{t.label}</button>
+          {extra.map((tab) => (
+            <button key={tab.href} type="button" className="plain extra-link" onClick={() => { setOpen(false); router.push(tab.href); }}><Icon name={tab.icon} />{t(tab.label)}</button>
           ))}
-          <button type="button" className="plain" onClick={() => { setOpen(false); router.push("/account"); }}><Icon name="user" />My account and password</button>
+          <button type="button" className="plain" onClick={() => { setOpen(false); router.push("/account"); }}><Icon name="user" />{t("My account and password")}</button>
+          <button type="button" className="plain" onClick={() => { setOpen(false); onGuide(); }}><Icon name="inbox" />{t("Help guide")}</button>
+          <button type="button" className="plain" onClick={() => { setOpen(false); onFeedback(); }}><Icon name="alert" />{t("Report a problem or idea")}</button>
           <button type="button" className="plain" onClick={async () => {
             await api("auth/logout", { body: {} }).catch(() => undefined);
             setMe(null);
             router.replace("/login");
-          }}><Icon name="logout" />Sign out</button>
+          }}><Icon name="logout" />{t("Sign out")}</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function FeedbackDialog({ page, onClose }: { page: string; onClose: () => void }) {
+  const { t } = useT();
+  const { busy, run } = useAction();
+  const [text, setText] = useState("");
+  return (
+    <div className="guide-backdrop" role="dialog" aria-modal="true" aria-label={t("Report a problem or idea")}>
+      <form className="guide" onSubmit={async (e) => {
+        e.preventDefault();
+        if (await run(() => api("feedback", { body: { text, page } }), "Sent to the owner. Thank you!")) onClose();
+      }}>
+        <h2>{t("Report a problem or idea")}</h2>
+        <p className="sub" style={{ margin: 0 }}>Tell the owner what went wrong or what is hard to use. Say what you were trying to do.</p>
+        <textarea required value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. The photo button didn't work on my phone" autoFocus />
+        <div className="row"><button type="button" className="ghost" onClick={onClose}>{t("Back")}</button><span className="grow" /><button disabled={busy}>{t("Send")}</button></div>
+      </form>
     </div>
   );
 }

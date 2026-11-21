@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, DataTable, EmptyCard, ErrorNote, Feed, PageHead, Pill, useAction } from "@/components/ui";
+import { CancelOrReport, DataTable, EmptyCard, ErrorNote, Feed, PageHead, Pill, T, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { useData } from "@/lib/session";
@@ -82,7 +82,7 @@ function CountTicket({ exam, onDone }: { exam: StoreExam; onDone: () => void }) 
           <label>Lowest serial number<input name="from" type="number" min={0} inputMode="numeric" required placeholder="e.g. 1" /></label>
           <label>Highest serial number<input name="to" type="number" min={0} inputMode="numeric" required placeholder="e.g. 98" /></label>
         </>}
-        <label>&nbsp;<button disabled={busy}>Confirm count</button></label>
+        <label>&nbsp;<button disabled={busy}><T>Confirm count</T></button></label>
       </form>
     </div>
   );
@@ -102,7 +102,7 @@ function IssueForm({ exams, sales, onDone }: { exams: StoreExam[]; sales: Summar
         <label>Sales person<select name="sales" required>{sales.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
         <label>Copies<input name="qty" type="number" min={1} inputMode="numeric" required /></label>
         <label>Serial numbers given (numbered exams)<input name="serials" placeholder="e.g. 001-040" /></label>
-        <div><button disabled={busy || !exams.length || !sales.length}>Issue copies</button></div>
+        <div><button disabled={busy || !exams.length || !sales.length}><T>Issue copies</T></button></div>
       </form>
     </section>
   );
@@ -125,7 +125,7 @@ function ReturnForm({ exams, sales, onDone }: { exams: StoreExam[]; sales: Summa
         <label>Exam<select name="exam" required>{held.map((h) => <option key={h.id} value={h.id}>{h.name} (holding {fmt(h.q)})</option>)}</select></label>
         <label>Copies returned<input name="qty" type="number" min={1} inputMode="numeric" required /></label>
         <label>Serial numbers returned (numbered exams)<input name="serials" placeholder="e.g. 031-040" /></label>
-        <div><button disabled={busy || !held.length}>Receive returns</button></div>
+        <div><button disabled={busy || !held.length}><T>Receive returns</T></button></div>
       </form>
     </section>
   );

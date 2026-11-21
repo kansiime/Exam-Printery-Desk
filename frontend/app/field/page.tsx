@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, EmptyCard, ErrorNote, Feed, Kpi, PageHead, PhotoInput, useAction, useToast } from "@/components/ui";
+import { CancelOrReport, EmptyCard, ErrorNote, Feed, Kpi, PageHead, PhotoInput, T, useAction, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, today, ugx, when } from "@/lib/format";
 import { discard, flush, listPending, submitVisit } from "@/lib/outbox";
@@ -185,7 +185,7 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
           <div>Owes<b style={{ color: owes > 0 ? "var(--bad)" : "var(--good)" }}>{fmt(Math.max(owes, 0))}</b></div>
         </div>
         <p className="mini" style={{ margin: 0 }}>Your location is saved with the visit. Allow location if your phone asks.</p>
-        <div><button disabled={busy || !holding.length}>Save visit</button></div>
+        <div><button disabled={busy || !holding.length}><T>Save visit</T></button></div>
       </form>
     </section>
   );

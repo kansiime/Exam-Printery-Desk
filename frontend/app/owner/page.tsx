@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, DataTable, Disclosure, ErrorNote, Findings, GiveResetCode, Kpi, PageHead, Pill, useAction } from "@/components/ui";
+import { CancelOrReport, DataTable, Disclosure, ErrorNote, Findings, GiveResetCode, Kpi, PageHead, Pill, T, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { Me, needsName, useData } from "@/lib/session";
@@ -158,7 +158,7 @@ function NewOrder({ onDone }: { onDone: () => void }) {
         <label>Exam date<input name="exam_date" type="date" /></label>
       </div>
       <label>Note for the printer (optional)<input name="note" placeholder="e.g. A4, staple top left" /></label>
-      <div><button disabled={busy}>Send to printer</button></div>
+      <div><button disabled={busy}><T>Send to printer</T></button></div>
     </form>
   );
 }

@@ -391,3 +391,36 @@ class PushKeys(models.Model):
     public_key = models.CharField(max_length=200)
     private_key = models.CharField(max_length=200)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Expense(Cancellable):
+    """Money spent running the printery, so profit can be worked out."""
+
+    class Category(models.TextChoices):
+        PAPER = "paper", "Paper"
+        TONER = "toner", "Toner and ink"
+        MACHINE = "machine", "Copier repair and service"
+        TRANSPORT = "transport", "Transport"
+        WAGES = "wages", "Wages"
+        COMMISSION = "commission", "Sales commission"
+        RENT = "rent", "Rent and power"
+        OTHER = "other", "Other"
+
+    date = models.DateField()
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.OTHER)
+    amount = models.PositiveIntegerField()
+    exam = models.ForeignKey(Exam, on_delete=models.PROTECT, null=True, blank=True, related_name="expenses",
+                             help_text="Set when the cost belongs to one exam (its paper, toner, transport)")
+    note = models.CharField(max_length=200, blank=True)
+    history = HistoricalRecords()
+
+
+class Feedback(Base):
+    """A problem or idea from a worker, especially during the pilot."""
+
+    text = models.TextField()
+    page = models.CharField(max_length=100, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+
+CANCELLABLE["expense"] = Expense

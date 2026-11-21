@@ -1,7 +1,8 @@
 "use client";
 import { Shell } from "@/components/Shell";
-import { PageHead, useAction, useToast } from "@/components/ui";
+import { PageHead, T, useAction, useToast } from "@/components/ui";
 import { api } from "@/lib/api";
+import { LanguagePicker } from "@/lib/i18n";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useSession } from "@/lib/session";
 
@@ -16,6 +17,7 @@ function Account({ me }: { me: Me }) {
     <>
       <PageHead title="My account" sub={`${me.name} · ${ROLE_LABEL[me.role]} · username ${me.username}`} />
       <Details me={me} />
+      <section className="panel"><h2>Language</h2><p className="sub">Menus, buttons and the help guide can be shown in Luganda.</p><LanguagePicker /></section>
       <section className="panel">
         <div><h2>Change password</h2><p className="sub">Choose something only you know, at least 8 characters. Other phones signed in to your account will be signed out.</p></div>
         <form onSubmit={async (e) => {
@@ -29,7 +31,7 @@ function Account({ me }: { me: Me }) {
             <label>New password<input name="new_password" type="password" autoComplete="new-password" minLength={8} required placeholder="8+ characters" /></label>
             <label>New password again<input name="again" type="password" autoComplete="new-password" minLength={8} required /></label>
           </div>
-          <div><button disabled={busy}>Change password</button></div>
+          <div><button disabled={busy}><T>Change password</T></button></div>
         </form>
       </section>
     </>
@@ -52,7 +54,7 @@ function Details({ me }: { me: Me }) {
           <label>Last name<input name="last_name" defaultValue={me.last_name} autoComplete="family-name" /></label>
           <label>Phone<input name="phone" type="tel" inputMode="tel" defaultValue={me.phone} placeholder="07…" autoComplete="tel" /></label>
         </div>
-        <div><button disabled={busy}>Save details</button></div>
+        <div><button disabled={busy}><T>Save details</T></button></div>
       </form>
     </section>
   );

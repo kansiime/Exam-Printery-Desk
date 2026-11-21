@@ -142,6 +142,27 @@ When an exam is finished, the owner taps **Close exam** on the Overview. Its rec
 - **QR codes:** on **QR stickers** (owner and printer), make a sheet of stickers for an exam's serial numbers and print it on sticker paper, one per copy. Anyone scanning a copy sees whether it is genuine and which school it was sold to. A copy that was never sold, was printed beyond the count, or has a fake code alerts the owner immediately.
 - **Alerts when the app is closed:** in the bell menu, tap **Turn on**. Android phones: works in Chrome. iPhones: first add the app to the Home Screen (Share → Add to Home Screen), open it from there, then turn alerts on. The server makes its own push keys; to use fixed keys set `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (`python manage.py generate_vapid_keys`).
 
+## Reports
+
+**Reports** (owner) shows, for any period: sales value, money collected, costs, commission and profit; profit per exam; each sales person's sales, collections, commission (rate set on Team) and debts; top schools, slow payers, best-selling exams and costs by type. Record costs with **Add an expense** (link a cost to an exam to see that exam's profit). **Download Excel** gives every sale, payment and expense on separate sheets; **Print / PDF** prints the page.
+
+## Help, language and feedback
+
+- Each person sees a short guide for their job the first time they sign in; it's under the account menu → **Help guide** after that.
+- **Luganda**: switch on the sign-in page or under **My account**. Menus, buttons, page titles and the guides are translated in `frontend/lib/i18n.tsx` (and `components/Guide.tsx`); please have a fluent speaker check them. Anything not translated stays in English.
+- Anyone can send a problem or idea from the account menu → **Report a problem or idea**. The owner is notified and sees them on **Pilot week**.
+
+## Pilot week
+
+**Pilot week** (owner) has a day-by-day checklist for running one real exam batch alongside your paper records, a **paper vs system** comparison for each exam (type your paper figures; differences show in red), and the team's problems and ideas.
+
+## Your own domain
+
+1. Buy a domain (for example from a Ugandan registrar or Namecheap), e.g. `edgarprintery.com`.
+2. In Render, open the **frontend** service → **Settings → Custom Domains → Add**, enter e.g. `app.edgarprintery.com`, and add the DNS record Render shows (a CNAME) at your domain registrar. Render adds HTTPS by itself.
+3. In the **backend** service → **Environment**, set `DJANGO_CSRF_TRUSTED_ORIGINS` to `https://app.edgarprintery.com` (comma-separate if you keep the onrender address too).
+4. Your team then opens `https://app.edgarprintery.com`. QR stickers made after the change carry the new address; print new stickers or keep the old address working.
+
 ## Several people in a role
 
 Any number of printers, store keepers and sales people can work at once. Each record shows who made it. Only the printer who started a job (or the owner) can post its count. Cash is tracked per store keeper as well as per sales person.

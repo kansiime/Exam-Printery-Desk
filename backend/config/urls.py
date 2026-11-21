@@ -3,7 +3,7 @@ from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from accounts import passwords
-from printery import extras
+from printery import extras, reports
 from printery import views as v
 
 router = DefaultRouter()
@@ -23,6 +23,8 @@ router.register("paper", v.PaperViewSet, basename="paper")
 router.register("checks", v.SchoolCheckViewSet, basename="check")
 router.register("momo", v.MomoViewSet, basename="momo")
 router.register("corrections", v.CorrectionViewSet, basename="correction")
+router.register("expenses", reports.ExpenseViewSet, basename="expense")
+router.register("feedback", reports.FeedbackViewSet, basename="feedback")
 
 api = [
     path("health/", v.health),
@@ -46,6 +48,9 @@ api = [
     path("push/key/", extras.push_key),
     path("push/subscribe/", extras.push_subscribe),
     path("push/unsubscribe/", extras.push_unsubscribe),
+    path("reports/", reports.report),
+    path("reports/excel/", reports.report_excel),
+    path("pilot/compare/", reports.pilot_compare),
     path("cancel/", v.cancel_record),
     path("cancelled/", v.cancelled_records),
     path("counts/", v.stock_counts),

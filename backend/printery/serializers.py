@@ -15,7 +15,7 @@ serializers.ModelSerializer.serializer_field_mapping[djm.ImageField] = RelativeI
 from accounts.models import User
 
 from .models import (
-    CashHandover, CorrectionRequest, Exam, Issue, Method, MomoLine, OtherPrint, OwnerHandover,
+    CashHandover, CorrectionRequest, Exam, Expense, Feedback, Issue, Method, MomoLine, OtherPrint, OwnerHandover,
     PaperIssue, Payment, PrintRun, Return, School, SchoolCheck, StoreReceipt, Visit,
 )
 from .services import Ledger, parse_serials
@@ -47,7 +47,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "name", "role", "phone", "is_active", "password"]
+        fields = ["id", "username", "first_name", "last_name", "name", "role", "phone", "is_active", "password", "commission_percent"]
 
     def create(self, data):
         password = data.pop("password", None)
@@ -336,3 +336,21 @@ class CorrectionSerializer(serializers.ModelSerializer):
         model = CorrectionRequest
         fields = ["id", "target_type", "target_id", "reason", "resolved_at", "resolution", "created_at", "by"]
         read_only_fields = ["resolved_at", "resolution"]
+
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    exam_name = serializers.CharField(source="exam.name", read_only=True, default="")
+    category_label = serializers.CharField(source="get_category_display", read_only=True)
+
+    class Meta:
+        model = Expense
+        fields = ["id", "date", "category", "category_label", "amount", "exam", "exam_name", "note", "created_at"]
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    by = serializers.CharField(source="created_by.display_name", read_only=True, default="")
+
+    class Meta:
+        model = Feedback
+        fields = ["id", "text", "page", "created_at", "resolved_at", "by"]
+        read_only_fields = ["resolved_at"]

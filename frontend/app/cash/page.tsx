@@ -1,6 +1,6 @@
 "use client";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, DataTable, ErrorNote, Feed, Kpi, PageHead, Pill, useAction } from "@/components/ui";
+import { CancelOrReport, DataTable, ErrorNote, Feed, Kpi, PageHead, Pill, T, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, ugx } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
@@ -63,7 +63,7 @@ function CashScreen({ me }: { me: Me }) {
             }}>
               <label>Sales person<select name="sales" required>{(s?.sales ?? []).map((x) => <option key={x.id} value={x.id}>{x.name} (owes {fmt(x.cash_held)})</option>)}</select></label>
               <label>Amount received (UGX)<input name="amount" type="number" min={1} inputMode="numeric" required /></label>
-              <div><button disabled={busy}>Record cash received</button></div>
+              <div><button disabled={busy}><T>Record cash received</T></button></div>
             </form>
           </section>
           <section className="panel"><h3>Hand cash to the owner</h3>
@@ -77,7 +77,7 @@ function CashScreen({ me }: { me: Me }) {
                 <label>How<select name="method"><option>Cash in hand</option><option>Mobile money</option><option>Bank deposit</option></select></label>
               </div>
               <label>Reference (optional)<input name="ref" placeholder="e.g. MoMo transaction ID or bank slip number" /></label>
-              <div><button disabled={busy}>Record handover</button></div>
+              <div><button disabled={busy}><T>Record handover</T></button></div>
             </form>
           </section>
         </div>

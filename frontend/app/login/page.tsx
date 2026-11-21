@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/icons";
 import { api } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { HOME, Me, useSession } from "@/lib/session";
 
 export default function Login() {
   const { me, setMe } = useSession();
+  const { t, lang, setLang } = useT();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -33,12 +35,12 @@ export default function Login() {
         }
       }}>
         <span className="logo"><Logo size={26} /></span>
-        <div><h1 style={{ fontSize: "1.5rem" }}>Welcome back</h1><p className="sub">Sign in with the username and password the owner gave you.</p></div>
+        <div><h1 style={{ fontSize: "1.5rem" }}>{t("Welcome back")}</h1><p className="sub">{t("Sign in with the username and password the owner gave you.")}</p></div>
         {error && <div className="banner" role="alert">{error}</div>}
-        <label>Username<input id="username" autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
-        <label>Password<input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-        <button disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-        <p className="mini" style={{ textAlign: "center", margin: 0 }}><Link href="/forgot">Forgot your password?</Link></p>
+        <label>{t("Username")}<input id="username" autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
+        <label>{t("Password")}<input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <button disabled={busy}>{busy ? "…" : t("Sign in")}</button>
+        <p className="mini" style={{ textAlign: "center", margin: 0 }}><Link href="/forgot">{t("Forgot your password?")}</Link> · <button type="button" className="plain" style={{ display: "inline", minHeight: 0, padding: 0, color: "var(--accent)", fontSize: "inherit" }} onClick={() => setLang(lang === "lg" ? "en" : "lg")}>{lang === "lg" ? "English" : "Luganda"}</button></p>
       </form>
     </div>
   );

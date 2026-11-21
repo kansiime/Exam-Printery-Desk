@@ -15,6 +15,8 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.SALES)
     phone = models.CharField(max_length=20, blank=True)
+    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0,
+                                             help_text="Sales people: commission on money they collect")
     history = HistoricalRecords()
 
     @property

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, Disclosure, EmptyCard, ErrorNote, Feed, PageHead, PhotoInput, useAction } from "@/components/ui";
+import { CancelOrReport, Disclosure, EmptyCard, ErrorNote, Feed, PageHead, PhotoInput, T, useAction } from "@/components/ui";
 import { api, toForm } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
@@ -66,7 +66,7 @@ function Ticket({ exam, run, me, onDone }: { exam: Exam; run?: Run; me: Me; onDo
           </div>
           <PhotoInput id={`pb-${exam.id}`} label="Photo of the meter before" value={photo} onChange={setPhoto} />
           <p className="mini" style={{ margin: 0 }}>Step 1 of 2. After printing you&apos;ll post the count, which sends the exam to the store.</p>
-          <div><button disabled={busy}>Start printing</button></div>
+          <div><button disabled={busy}><T>Start printing</T></button></div>
         </form>
       ) : run.created_by && run.created_by !== me.id && me.role !== "owner" ? (
         <p className="banner info" style={{ margin: 0 }}>{run.by} is printing this (started {when(run.started_at)}, meter {fmt(run.meter_before)}). Only they can post the count.</p>
@@ -86,7 +86,7 @@ function Ticket({ exam, run, me, onDone }: { exam: Exam; run?: Run; me: Me; onDo
             <label>Meter reading after<input name="meter_after" type="number" min={0} inputMode="numeric" required /></label>
           </div>
           <PhotoInput id={`pa-${exam.id}`} label="Photo of the meter after" value={photo} onChange={setPhoto} />
-          <div><button disabled={busy}>Post printed and send to store</button></div>
+          <div><button disabled={busy}><T>Post printed and send to store</T></button></div>
         </form>
       )}
     </div>
