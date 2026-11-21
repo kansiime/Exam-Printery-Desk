@@ -81,11 +81,22 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 def database_from_url(url):
-    """postgresql://user:pass@host:port/name (what Render and most hosts give you)."""
-    from urllib.parse import unquote, urlparse
+    """postgresql://user:pass@host:port/name?sslmode=require (Neon, Render and most hosts).
+
+    Query options such as sslmode and channel_binding are passed to the driver.
+    Neon's pooled address ("-pooler" in the host) runs PgBouncer in transaction
+    mode, which can't keep server-side cursors open between queries.
+    """
+    from urllib.parse import parse_qsl, unquote, urlparse
     u = urlparse(url)
-    return {"NAME": u.path.lstrip("/"), "USER": unquote(u.username or ""), "PASSWORD": unquote(u.password or ""),
-            "HOST": u.hostname or "", "PORT": str(u.port or 5432)}
+    db = {"NAME": unquote(u.path.lstrip("/")), "USER": unquote(u.username or ""), "PASSWORD": unquote(u.password or ""),
+          "HOST": u.hostname or "", "PORT": str(u.port or 5432)}
+    options = dict(parse_qsl(u.query))
+    if options:
+        db["OPTIONS"] = options
+    if "-pooler" in db["HOST"]:
+        db["DISABLE_SERVER_SIDE_CURSORS"] = True
+    return db
 
 
 DATABASES = {
@@ -97,6 +108,7 @@ DATABASES = {
         "HOST": env("POSTGRES_HOST", "localhost"),
         "PORT": env("POSTGRES_PORT", "5432"),
         "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,  # reconnect cleanly after Neon pauses an idle database
     }
 }
 if env("DATABASE_URL"):

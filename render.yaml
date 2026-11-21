@@ -1,6 +1,7 @@
 # Render Blueprint: creates the whole Exam Printery Desk system.
 # In Render: New > Blueprint > pick this repository. Render asks for the values marked "sync: false".
 # All services are in one region so they can talk over Render's private network.
+# The database is on Neon (https://neon.tech): create it in AWS Europe (Frankfurt) to sit next to Render's Frankfurt region.
 
 envVarGroups:
   - name: printery-settings
@@ -32,13 +33,6 @@ envVarGroups:
       - key: MOMO_WEBHOOK_TOKEN
         generateValue: true
 
-databases:
-  - name: printery-db
-    plan: basic-256mb
-    region: frankfurt
-    databaseName: printery
-    user: printery
-
 services:
   # Django API, admin and photos
   - type: web
@@ -58,9 +52,7 @@ services:
     envVars:
       - fromGroup: printery-settings
       - key: DATABASE_URL
-        fromDatabase:
-          name: printery-db
-          property: connectionString
+        sync: false            # paste your Neon connection string (it ends with ?sslmode=require)
       - key: MEDIA_ROOT
         value: /var/data/media
       - key: OWNER_USERNAME
@@ -99,6 +91,4 @@ services:
     envVars:
       - fromGroup: printery-settings
       - key: DATABASE_URL
-        fromDatabase:
-          name: printery-db
-          property: connectionString
+        sync: false            # paste your Neon connection string (it ends with ?sslmode=require)

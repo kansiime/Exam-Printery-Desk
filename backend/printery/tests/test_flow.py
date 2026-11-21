@@ -207,6 +207,9 @@ def test_database_url_parsing():
     from config.settings import database_from_url
     d = database_from_url("postgresql://print%40er:p%3Ass@db.internal/printery")
     assert d == {"NAME": "printery", "USER": "print@er", "PASSWORD": "p:ss", "HOST": "db.internal", "PORT": "5432"}
+    neon = database_from_url("postgresql://neondb_owner:secret@ep-cool-sun-a1b2c3-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+    assert neon["OPTIONS"] == {"sslmode": "require", "channel_binding": "require"}
+    assert neon["DISABLE_SERVER_SIDE_CURSORS"] is True and neon["NAME"] == "neondb"
 
 
 def test_ensure_owner(monkeypatch):

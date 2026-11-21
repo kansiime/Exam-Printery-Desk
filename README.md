@@ -64,13 +64,15 @@ The repository includes `render.yaml`, a Render Blueprint that creates everythin
 
 | Render service | What it is |
 |---|---|
-| `printery-db` | PostgreSQL database |
+| Neon (not Render) | PostgreSQL database: create it at https://console.neon.tech |
 | `exam-printery-api` | Django API and admin, with a 2 GB disk for meter and delivery-note photos |
 | `exam-printery-app` | The phone app. **This is the address your team opens.** |
 | `exam-printery-daily-summary` | Cron job that texts the owner at 20:37 Kampala time |
 
+1. **Database:** at https://console.neon.tech create a project in **AWS Europe Central 1 (Frankfurt)**, open **Connect**, and copy the connection string. It looks like `postgresql://neondb_owner:…@ep-…-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require`.
 1. Sign in at https://dashboard.render.com, then **New → Blueprint**, and connect the `Exam-Printery-Desk` GitHub repository.
 2. Render asks for the values marked `sync: false`:
+   - `DATABASE_URL`: the Neon connection string (Render asks twice, once for the API and once for the cron job; paste the same one)
    - `BUSINESS_NAME`: your printery's name
    - `OWNER_USERNAME` and `OWNER_PASSWORD`: your owner login, created on the first deploy (password 8+ characters)
    - `OWNER_PHONE`: for the daily summary (07XXXXXXXX)
@@ -78,13 +80,13 @@ The repository includes `render.yaml`, a Render Blueprint that creates everythin
 3. Click **Apply**. The first build takes about 5–10 minutes.
 4. Open the **exam-printery-app** URL (for example `https://exam-printery-app.onrender.com`), sign in as the owner, and add your workers on the **Team** screen.
 
-The API, app and cron job use paid "Starter" plans, and the database uses a paid plan. The free plans sleep after 15 minutes, can't keep photos, and the free database expires. Check current prices on Render's pricing page.
+The API, app and cron job use paid "Starter" plans: the free plans sleep after 15 minutes and can't keep photos. Neon's free plan works for a start; it pauses when idle, so the first request after a quiet spell takes a second or two. Check current prices on Render's pricing page.
 
 **Your own domain (optional):** add it to `exam-printery-app` under Settings → Custom Domains. Then set `DJANGO_CSRF_TRUSTED_ORIGINS` to `https://your-domain` in the `printery-settings` environment group.
 
 **SMS later:** in the `printery-settings` group, set `SMS_PROVIDER=africastalking`, `AT_USERNAME`, `AT_API_KEY` and `AT_SENDER_ID`. Point Africa's Talking's incoming messages to `https://YOUR-APP-URL/api/webhooks/sms/?token=` followed by the generated `SMS_WEBHOOK_TOKEN`.
 
-**Backups:** Render backs up paid databases automatically. Photos are on the API's disk, which Render snapshots daily.
+**Backups:** Neon keeps a restore history of the database (its length depends on your Neon plan). Photos are on the API's disk, which Render snapshots daily.
 
 ## Put it online on your own server
 
