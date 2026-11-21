@@ -185,3 +185,29 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: { columns: Column
     </div>
   );
 }
+
+/** Owner: make a one-time password reset code and pass it on by WhatsApp, a call, or in person. */
+export function GiveResetCode({ userId, label = "Create reset code", onDone }: { userId: number; label?: string; onDone?: () => void }) {
+  const [given, setGiven] = useState<{ code: string; name: string; phone: string; message: string; hours: number } | null>(null);
+  const { busy, run } = useAction();
+  const toast = useToast();
+  if (!given) {
+    return <button type="button" className="ghost" disabled={busy} onClick={() => run(async () => { setGiven(await api(`users/${userId}/reset-code`, { body: {} })); onDone?.(); })}>{label}</button>;
+  }
+  const digits = given.phone.replace(/\D/g, "");
+  const intl = digits.startsWith("0") && digits.length === 10 ? "256" + digits.slice(1) : digits;
+  const wa = `https://wa.me/${intl}?text=${encodeURIComponent(given.message)}`;
+  return (
+    <div className="panel" style={{ background: "var(--surface-2)", gap: 10 }}>
+      <p className="mini" style={{ margin: 0 }}>Reset code for {given.name}. It works once, within {given.hours} hours:</p>
+      <div className="big" style={{ letterSpacing: ".15em" }}>{given.code}</div>
+      <div className="row">
+        <a className="btnlink" href={wa} target="_blank" rel="noopener">Send on WhatsApp</a>
+        <button type="button" className="ghost" onClick={async () => {
+          try { await navigator.clipboard.writeText(given.message); toast("Message copied"); } catch { toast("Copy didn't work. Read the code out instead."); }
+        }}>Copy message</button>
+      </div>
+      <p className="mini" style={{ margin: 0 }}>{given.phone ? `WhatsApp opens a chat with ${given.phone}.` : "No phone number saved, so WhatsApp asks you to choose the contact."} Or read the code out to them.</p>
+    </div>
+  );
+}

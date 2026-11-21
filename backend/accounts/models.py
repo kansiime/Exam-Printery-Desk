@@ -40,3 +40,11 @@ class PasswordResetCode(models.Model):
     expires_at = models.DateTimeField()
     attempts = models.PositiveSmallIntegerField(default=0)
     used_at = models.DateTimeField(null=True, blank=True)
+
+
+class ResetRequest(models.Model):
+    """A worker asked for a password reset while SMS is not set up; the owner hands them a code."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reset_requests")
+    created_at = models.DateTimeField(auto_now_add=True)
+    handled_at = models.DateTimeField(null=True, blank=True)

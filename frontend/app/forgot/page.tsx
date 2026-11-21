@@ -29,10 +29,10 @@ export default function Forgot() {
             setNote(r.detail);
             setStep("code");
           }); }}>
-            <div><h1 style={{ fontSize: "1.5rem" }}>Forgot your password?</h1><p className="sub">Enter your username. We&apos;ll send a 6-digit code by SMS to the phone number on your account.</p></div>
+            <div><h1 style={{ fontSize: "1.5rem" }}>Forgot your password?</h1><p className="sub">Enter your username. You&apos;ll get a 6-digit code: by SMS to the phone on your account, or from the owner.</p></div>
             {error && <div className="banner" role="alert">{error}</div>}
             <label>Username<input autoComplete="username" autoCapitalize="none" required value={username} onChange={(e) => setUsername(e.target.value)} /></label>
-            <button disabled={busy}>{busy ? "Sending…" : "Send me a code"}</button>
+            <button disabled={busy}>{busy ? "Sending…" : "Get a code"}</button>
           </form>
         )}
         {step === "code" && (

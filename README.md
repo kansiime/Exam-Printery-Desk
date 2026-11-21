@@ -102,6 +102,10 @@ This starts PostgreSQL, Redis, Django (gunicorn), a Celery worker, Celery beat (
 
 Back up the `pgdata` and `media` volumes every day (database and photos).
 
+## Forgot password without SMS
+
+Until SMS is switched on, "Forgot your password?" sends the request to the owner's Overview. The owner taps **Create reset code** and passes the 6-digit code on by WhatsApp (one tap), a call or in person. The code works once, within 24 hours. The owner can also create a code from **Team → Edit**. Once Africa's Talking is set up, codes go by SMS automatically instead.
+
 ## Integrations
 
 | What | How to switch on |

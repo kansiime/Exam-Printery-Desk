@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Shell } from "@/components/Shell";
-import { CancelOrReport, DataTable, Disclosure, ErrorNote, Findings, Kpi, PageHead, Pill, useAction } from "@/components/ui";
+import { CancelOrReport, DataTable, Disclosure, ErrorNote, Findings, GiveResetCode, Kpi, PageHead, Pill, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
 import { Me, needsName, useData } from "@/lib/session";
@@ -52,6 +52,8 @@ function OverviewScreen({ me }: { me: Me }) {
       <Disclosure title="New print order" sub="When a school says its exams are done" icon="plus" primary>
         <NewOrder onDone={ov.reload} />
       </Disclosure>
+
+      <ResetRequests />
 
       {!!d?.pending_prices.length && (
         <section className="block">
@@ -153,5 +155,28 @@ function NewOrder({ onDone }: { onDone: () => void }) {
       <label>Note for the printer (optional)<input name="note" placeholder="e.g. A4, staple top left" /></label>
       <div><button disabled={busy}>Send to printer</button></div>
     </form>
+  );
+}
+
+type ResetReq = { id: number; user: number; name: string; username: string; phone: string; created_at: string };
+
+function ResetRequests() {
+  const reqs = useData<ResetReq[]>("auth/password/requests");
+  const { run } = useAction();
+  if (!reqs.data?.length) return null;
+  return (
+    <section className="block">
+      <div className="sectiontitle"><h2>Password reset requests</h2><span className="count">{reqs.data.length}</span></div>
+      <p className="sub">These people tapped “Forgot your password?”. Create a code and give it to them by WhatsApp, a call or in person. Only do this if you know the request is really from them.</p>
+      {reqs.data.map((r) => (
+        <div className="ticket" key={r.id}>
+          <div className="head" style={{ alignItems: "center" }}>
+            <div className="t"><h3>{r.name}</h3><p className="sub">username {r.username}{r.phone ? ` · ${r.phone}` : ""} · asked {when(r.created_at)}</p></div>
+            <button type="button" className="ghost" onClick={() => run(() => api(`auth/password/requests/${r.id}/dismiss`, { body: {} }), "Request dismissed").then(reqs.reload)}>Dismiss</button>
+          </div>
+          <GiveResetCode userId={r.user} />
+        </div>
+      ))}
+    </section>
   );
 }

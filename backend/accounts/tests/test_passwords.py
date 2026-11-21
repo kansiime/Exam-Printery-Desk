@@ -16,6 +16,7 @@ def clear_throttle():
 
 @pytest.fixture
 def sms(monkeypatch):
+    monkeypatch.setattr("accounts.passwords.sms_enabled", lambda: True)
     sent = []
     monkeypatch.setattr("accounts.passwords.send_sms", lambda to, msg: sent.append((to, msg)) or True)
     return sent
@@ -81,3 +82,24 @@ def test_people_set_their_own_name_but_not_their_role(musa):
     r = c.patch("/api/auth/me/", {"first_name": "Musa", "last_name": "Okello", "phone": "0700111222", "role": "owner"}, format="json")
     assert r.status_code == 200 and r.data["name"] == "Musa Okello" and r.data["role"] == "sales"
     assert c.patch("/api/auth/me/", {"first_name": "  "}, format="json").status_code == 400
+
+
+def test_without_sms_the_owner_hands_out_a_code(musa):
+    owner = User.objects.create_user("boss", password="boss-pass-123", role="owner")
+    anon, boss, worker = APIClient(), APIClient(), APIClient()
+    boss.force_login(owner)
+    worker.force_login(musa)
+    r = anon.post("/api/auth/password/forgot/", {"username": "musa"})
+    assert r.status_code == 200 and r.data["via"] == "owner"
+    anon.post("/api/auth/password/forgot/", {"username": "musa"})  # asking twice makes one request
+    reqs = boss.get("/api/auth/password/requests/").data
+    assert len(reqs) == 1 and reqs[0]["username"] == "musa"
+    assert worker.get("/api/auth/password/requests/").status_code == 403
+    assert worker.post(f"/api/users/{musa.id}/reset-code/").status_code == 403
+    given = boss.post(f"/api/users/{musa.id}/reset-code/").data
+    assert len(given["code"]) == 6 and given["code"] in given["message"]
+    assert boss.get("/api/auth/password/requests/").data == []
+    r = anon.post("/api/auth/password/reset/", {"username": "musa", "code": given["code"], "new_password": "brand-new-pass-9"})
+    assert r.status_code == 200
+    musa.refresh_from_db()
+    assert musa.check_password("brand-new-pass-9")

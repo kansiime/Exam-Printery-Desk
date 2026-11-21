@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
-import { Disclosure, EmptyCard, ErrorNote, PageHead, Pill, useAction } from "@/components/ui";
+import { Disclosure, EmptyCard, ErrorNote, GiveResetCode, PageHead, Pill, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
@@ -66,6 +66,7 @@ function Member({ user: u, onSaved }: { user: User; onSaved: () => void }) {
         {!u.is_active && <Pill cls="p-done">Switched off</Pill>}
         <button type="button" className="ghost" onClick={() => setEdit((x) => !x)}>{edit ? "Close" : "Edit"}</button>
       </div>
+      {edit && <GiveResetCode userId={u.id} label="Create a password reset code" />}
       {edit && (
         <form onSubmit={async (e) => {
           e.preventDefault();

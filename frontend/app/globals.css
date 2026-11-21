@@ -245,3 +245,5 @@ td.bad { color: var(--bad); font-weight: 600; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } .disclosure > button.dhead .chev { transition: none; } }
 @media (min-width: 900px) { .menu .extra-link { display: none; } }
+a.btnlink { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 11px 18px; border-radius: var(--radius-sm); background: #1fa855; color: #fff; font-weight: 600; text-decoration: none; }
+a.btnlink:hover { filter: brightness(1.05); }
