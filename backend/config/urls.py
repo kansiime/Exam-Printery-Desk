@@ -35,6 +35,8 @@ api = [
     path("auth/password/requests/", passwords.reset_requests),
     path("auth/password/requests/<int:request_id>/dismiss/", passwords.dismiss_request),
     path("users/<int:user_id>/reset-code/", passwords.give_code),
+    path("notifications/", v.notifications),
+    path("notifications/read/", v.notifications_read),
     path("cancel/", v.cancel_record),
     path("cancelled/", v.cancelled_records),
     path("counts/", v.stock_counts),

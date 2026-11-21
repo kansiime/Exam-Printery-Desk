@@ -1,5 +1,16 @@
+from django.db import models as djm
 from django.db import transaction
 from rest_framework import serializers
+
+
+class RelativeImageField(serializers.ImageField):
+    """Photos as /media/... paths, so they load through whichever address the person signed in on."""
+
+    def to_representation(self, value):
+        return value.url if value else None
+
+
+serializers.ModelSerializer.serializer_field_mapping[djm.ImageField] = RelativeImageField
 
 from accounts.models import User
 
@@ -95,7 +106,7 @@ class PrintRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrintRun
         fields = ["id", "exam", "exam_name", "machine", "meter_before", "meter_after", "qty", "spoilt",
-                  "photo_before", "photo_after", "started_at", "done_at", "by"]
+                  "photo_before", "photo_after", "started_at", "done_at", "by", "created_by"]
 
 
 class OtherPrintSerializer(serializers.ModelSerializer):

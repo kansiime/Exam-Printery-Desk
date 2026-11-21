@@ -4,17 +4,17 @@ import { Shell } from "@/components/Shell";
 import { CancelOrReport, Disclosure, EmptyCard, ErrorNote, Feed, PageHead, PhotoInput, useAction } from "@/components/ui";
 import { api, toForm } from "@/lib/api";
 import { fmt, when } from "@/lib/format";
-import { useData } from "@/lib/session";
+import { Me, useData } from "@/lib/session";
 
 type Exam = { id: number; name: string; ordered_qty: number; pages: number; sides: number; numbered: boolean; note: string; created_at: string };
-type Run = { id: number; exam: number; exam_name: string; machine: string; meter_before: number; meter_after: number | null; qty: number | null; started_at: string; done_at: string | null; by: string };
+type Run = { id: number; exam: number; exam_name: string; machine: string; meter_before: number; meter_after: number | null; qty: number | null; started_at: string; done_at: string | null; by: string; created_by: number | null; photo_before: string | null; photo_after: string | null };
 type Other = { id: number; description: string; machine: string; meter_before: number; meter_after: number; created_at: string };
 
 export default function PrintPage() {
-  return <Shell allow={["printer", "owner"]}>{() => <Printing />}</Shell>;
+  return <Shell allow={["printer", "owner"]}>{(me) => <Printing me={me} />}</Shell>;
 }
 
-function Printing() {
+function Printing({ me }: { me: Me }) {
   const exams = useData<Exam[]>("exams");
   const runs = useData<Run[]>("prints");
   const others = useData<Other[]>("other-prints");
@@ -22,7 +22,7 @@ function Printing() {
   const done = new Set((runs.data ?? []).filter((r) => r.done_at).map((r) => r.exam));
   const todo = (exams.data ?? []).filter((e) => !done.has(e.id));
   const recent: { key: string; at: string | null; text: React.ReactNode; act: React.ReactNode }[] = [
-    ...(runs.data ?? []).filter((r) => r.done_at).map((r) => ({ key: "p" + r.id, at: r.done_at, text: <><b>{fmt(r.qty)}</b> copies · {r.exam_name} · meter {fmt(r.meter_before)} → {fmt(r.meter_after)} · by {r.by}</>, act: <CancelOrReport type="print" id={r.id} onDone={reload} /> })),
+    ...(runs.data ?? []).filter((r) => r.done_at).map((r) => ({ key: "p" + r.id, at: r.done_at, text: <><b>{fmt(r.qty)}</b> copies · {r.exam_name} · meter {fmt(r.meter_before)} → {fmt(r.meter_after)} · by {r.by}<span className="nphotos" style={{ marginTop: 6 }}>{[r.photo_before, r.photo_after].filter(Boolean).map((p) => <a key={p!} href={p!} target="_blank" rel="noopener"><img src={p!} alt="Meter photo" /></a>)}</span></>, act: <CancelOrReport type="print" id={r.id} onDone={reload} /> })),
     ...(others.data ?? []).map((o) => ({ key: "o" + o.id, at: o.created_at, text: <>Other printing: {o.description} · meter {fmt(o.meter_before)} → {fmt(o.meter_after)}</>, act: <CancelOrReport type="other" id={o.id} onDone={reload} /> })),
   ].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 12);
 
@@ -30,7 +30,7 @@ function Printing() {
     <>
       <ErrorNote error={exams.error || runs.error} />
       <PageHead title="Printing" sub={<>For every job, read the copier meter and take a photo of it before you start and after you finish.</>} />
-      {todo.length ? todo.map((e) => <Ticket key={e.id} exam={e} run={(runs.data ?? []).find((r) => r.exam === e.id && !r.done_at)} onDone={reload} />)
+      {todo.length ? todo.map((e) => <Ticket key={e.id} exam={e} me={me} run={(runs.data ?? []).find((r) => r.exam === e.id && !r.done_at)} onDone={reload} />)
         : <EmptyCard icon="printer">Nothing to print right now. New orders from the owner appear here.</EmptyCard>}
       <OtherPrinting onDone={reload} />
       <section className="panel"><h3>Recently printed</h3><Feed items={recent} empty="Nothing printed yet." /></section>
@@ -38,7 +38,7 @@ function Printing() {
   );
 }
 
-function Ticket({ exam, run, onDone }: { exam: Exam; run?: Run; onDone: () => void }) {
+function Ticket({ exam, run, me, onDone }: { exam: Exam; run?: Run; me: Me; onDone: () => void }) {
   const [photo, setPhoto] = useState<Blob | null>(null);
   const { busy, run: act } = useAction();
   return (
@@ -66,6 +66,8 @@ function Ticket({ exam, run, onDone }: { exam: Exam; run?: Run; onDone: () => vo
           <PhotoInput id={`pb-${exam.id}`} label="Photo of the meter before" value={photo} onChange={setPhoto} />
           <div><button disabled={busy}>Start printing</button></div>
         </form>
+      ) : run.created_by && run.created_by !== me.id && me.role !== "owner" ? (
+        <p className="banner info" style={{ margin: 0 }}>{run.by} is printing this (started {when(run.started_at)}, meter {fmt(run.meter_before)}). Only they can post the count.</p>
       ) : (
         <form onSubmit={async (e) => {
           e.preventDefault();
@@ -74,7 +76,7 @@ function Ticket({ exam, run, onDone }: { exam: Exam; run?: Run; onDone: () => vo
           const ok = await act(() => api(`prints/${run.id}/finish`, { form: toForm({ qty: f.get("qty"), spoilt: f.get("spoilt"), meter_after: f.get("meter_after"), photo_after: photo }) }), "Printed copies posted");
           if (ok) { setPhoto(null); onDone(); }
         }}>
-          <p className="mini">Started {when(run.started_at)} on {run.machine} · meter before {fmt(run.meter_before)}</p>
+          <p className="mini">Started by {run.by || "you"} {when(run.started_at)} on {run.machine} · meter before {fmt(run.meter_before)}</p>
           <div className="grid3">
             <label>Good copies printed<input name="qty" type="number" min={0} inputMode="numeric" required defaultValue={exam.ordered_qty} /></label>
             <label>Spoilt sheets<input name="spoilt" type="number" min={0} inputMode="numeric" defaultValue={0} /></label>

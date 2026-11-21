@@ -305,3 +305,27 @@ CANCELLABLE = {
     "count": StockCount,
     "check": SchoolCheck,
 }
+
+
+class Notification(models.Model):
+    """An in-app message to one person. Urgent ones ring loudly on their phone."""
+
+    class Level(models.TextChoices):
+        INFO = "info", "Information"
+        ACTION = "action", "Needs action"
+        URGENT = "urgent", "Urgent warning"
+
+    recipient = models.ForeignKey(USER, on_delete=models.CASCADE, related_name="notifications")
+    level = models.CharField(max_length=10, choices=Level.choices, default=Level.INFO)
+    title = models.CharField(max_length=200)
+    body = models.TextField(blank=True)
+    link = models.CharField(max_length=200, blank=True)
+    photos = models.JSONField(default=list, blank=True)
+    key = models.CharField(max_length=64, blank=True, help_text="Stops the same warning being sent twice")
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["recipient", "read_at"])]
+        constraints = [models.UniqueConstraint(fields=["recipient", "key"], condition=~models.Q(key=""), name="one_notification_per_key")]

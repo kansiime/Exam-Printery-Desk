@@ -72,6 +72,11 @@ export function useData<T>(path: string | null) {
       try { const c = localStorage.getItem("cache:" + path); if (c) setData((cur) => cur ?? JSON.parse(c)); } catch {}
     }
   }, [path]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // New notifications mean new figures: reload this screen's data too.
+    window.addEventListener("printery:refresh", load);
+    return () => window.removeEventListener("printery:refresh", load);
+  }, [load]);
   return { data, error, reload: load };
 }

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useGuard, useSession } from "@/lib/session";
+import { Bell } from "./Bell";
 import { Icon, Logo } from "./icons";
 
 type Tab = { href: string; label: string; short: string; icon: string };
@@ -66,7 +67,7 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
       <header className="topbar">
         <div className="brandmark"><span className="logo"><Logo /></span><div><b>{me.business}</b><small>{current?.label ?? ""}</small></div></div>
         <span className="pagetitle">{current?.label}</span>
-        <AccountMenu me={me} extra={extra} />
+        <div className="topactions"><Bell /><AccountMenu me={me} extra={extra} /></div>
       </header>
 
       {!online && <div className="offline">No network. You can keep working; changes that need the internet will wait.</div>}

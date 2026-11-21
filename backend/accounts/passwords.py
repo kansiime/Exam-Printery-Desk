@@ -65,6 +65,9 @@ def forgot(request):
         # No SMS yet: the owner sees the request in the app and hands over a code.
         if user and not ResetRequest.objects.filter(user=user, handled_at__isnull=True).exists():
             ResetRequest.objects.create(user=user)
+            from printery import notify
+            notify.tell_roles([notify.OWNER], f"{user.display_name} forgot their password",
+                              "Create a reset code for them on your Overview.", "/owner", "action")
         return Response({"detail": ASKED, "via": "owner"})
     if user and user.phone:
         code = new_code(user, PasswordResetCode.LIFETIME_MINUTES)

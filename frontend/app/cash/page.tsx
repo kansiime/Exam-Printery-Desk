@@ -5,7 +5,8 @@ import { api } from "@/lib/api";
 import { fmt, ugx } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
 
-type Summary = { store: { received: number; handed: number; held: number; unconfirmed: number; confirmed: number }; sales: { id: number; name: string; cash_collected: number; handed: number; cash_held: number }[] };
+type Keeper = { id: number; name: string; received: number; handed: number; held: number; unconfirmed: number };
+type Summary = { keepers: Keeper[]; store: { received: number; handed: number; held: number; unconfirmed: number; confirmed: number }; sales: { id: number; name: string; cash_collected: number; handed: number; cash_held: number }[] };
 type Cash = { id: number; sales_name: string; amount: number; created_at: string; by: string };
 type Handover = { id: number; amount: number; method: string; ref: string; confirmed_at: string | null; created_at: string; by: string };
 
@@ -27,7 +28,7 @@ function CashScreen({ me }: { me: Me }) {
       <PageHead title="Cash" sub={<>Sales people hand cash to the store keeper. The store keeper hands it to the owner, and the owner confirms. Mobile money goes straight to the business number.</>} />
       <div className="kpis">
         <Kpi label="With sales people" value={fmt(s?.sales.reduce((a, x) => a + x.cash_held, 0))} />
-        <Kpi label="With store keeper" value={fmt(s?.store.held)} bad={(s?.store.held ?? 0) > 0} />
+        <Kpi label={isStore ? "With me" : "With store keepers"} value={fmt(s?.store.held)} bad={(s?.store.held ?? 0) > 0} />
         <Kpi label="Waiting for owner" value={fmt(s?.store.unconfirmed)} />
         <Kpi label="Confirmed by owner" value={fmt(s?.store.confirmed)} />
       </div>
@@ -40,6 +41,18 @@ function CashScreen({ me }: { me: Me }) {
             { label: "Still to hand in", cell: (x) => <b>{fmt(x.cash_held)}</b>, bad: (x) => x.cash_held > 0 },
           ]} />
       </section>
+      {!isStore && !!s?.keepers.length && (
+        <section className="block"><h3>Cash each store keeper holds</h3>
+          <DataTable<Keeper> rows={s.keepers} rowKey={(k) => k.id} empty=""
+            columns={[
+              { label: "Store keeper", cell: (k) => <b>{k.name}</b> },
+              { label: "Received from sales", cell: (k) => fmt(k.received) },
+              { label: "Handed to you", cell: (k) => fmt(k.handed) },
+              { label: "Not yet confirmed", cell: (k) => fmt(k.unconfirmed) },
+              { label: "Still holding", cell: (k) => <b>{fmt(k.held)}</b>, bad: (k) => k.held > 0 },
+            ]} />
+        </section>
+      )}
       {isStore && (
         <div className="split">
           <section className="panel"><h3>Receive cash from a sales person</h3>

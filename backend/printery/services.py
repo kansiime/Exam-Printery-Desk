@@ -138,12 +138,19 @@ class Ledger:
             "pending_issues": [x.id for x in iss if not x.accepted_at],
         }
 
-    def store_cash(self):
-        received = sum(c.amount for c in self.cash)
-        handed = sum(h.amount for h in self.handovers)
+    def store_cash(self, keeper_id=None):
+        """Cash with the store. Pass a store keeper's id for what that one person holds."""
+        cash = [c for c in self.cash if keeper_id is None or c.created_by_id == keeper_id]
+        handovers = [h for h in self.handovers if keeper_id is None or h.created_by_id == keeper_id]
+        received = sum(c.amount for c in cash)
+        handed = sum(h.amount for h in handovers)
         return {"received": received, "handed": handed, "held": received - handed,
-                "unconfirmed": sum(h.amount for h in self.handovers if not h.confirmed_at),
-                "confirmed": sum(h.amount for h in self.handovers if h.confirmed_at)}
+                "unconfirmed": sum(h.amount for h in handovers if not h.confirmed_at),
+                "confirmed": sum(h.amount for h in handovers if h.confirmed_at)}
+
+    def store_keepers(self):
+        keepers = [u for u in self.users.values() if u.role == User.Role.STORE and u.is_active]
+        return [{"id": u.id, "name": u.display_name, **self.store_cash(u.id)} for u in sorted(keepers, key=lambda u: u.display_name.lower())]
 
     def paper_stats(self):
         issued = sum(p.sheets for p in self.paper)

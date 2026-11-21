@@ -102,6 +102,24 @@ This starts PostgreSQL, Redis, Django (gunicorn), a Celery worker, Celery beat (
 
 Back up the `pgdata` and `media` volumes every day (database and photos).
 
+## Notifications
+
+Everyone gets in-app notifications for their part of the work, with a loud alarm, vibration and a pop-up:
+
+| Who | Told when |
+|---|---|
+| Printers (all of them) | A new print order is posted |
+| Owner | Printing starts or finishes (meter readings and photos), the store counts, a sale is made (delivery-note photo), a discount needs approval, a school pays, the store keeper hands over cash, a mistake or forgotten password is reported, and **every new fraud warning** (urgent siren) |
+| Store keepers (all of them) | An exam is printed and ready to fold and count |
+| A sales person | Copies are issued to them, returns or cash from them are recorded, a discount is decided |
+| A store keeper | Their issue is accepted, the owner confirms their cash handover |
+
+The app checks for news every 20 seconds while it is open, and screens refresh by themselves. Phones only allow sound after the first tap on the page. With the browser allowed to show notifications, they also appear when the app is in the background. When the app is fully closed nothing rings; that needs Web Push (a possible next step) or SMS.
+
+## Several people in a role
+
+Any number of printers, store keepers and sales people can work at once. Each record shows who made it. Only the printer who started a job (or the owner) can post its count. Cash is tracked per store keeper as well as per sales person.
+
 ## Forgot password without SMS
 
 Until SMS is switched on, "Forgot your password?" sends the request to the owner's Overview. The owner taps **Create reset code** and passes the 6-digit code on by WhatsApp (one tap), a call or in person. The code works once, within 24 hours. The owner can also create a code from **Team → Edit**. Once Africa's Talking is set up, codes go by SMS automatically instead.

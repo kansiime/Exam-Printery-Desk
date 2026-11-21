@@ -31,14 +31,19 @@ export function useAction() {
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     if (busy) return false;
     setBusy(true);
+    // A sleeping server can take a while: say so instead of looking frozen.
+    const slow = setTimeout(() => toast("Saving… please wait"), 800);
     try {
       await fn();
+      clearTimeout(slow);
       if (ok) toast(ok);
       return true;
     } catch (e: any) {
+      clearTimeout(slow);
       toast(e?.message || "Could not save. Try again.");
       return false;
     } finally {
+      clearTimeout(slow);
       setBusy(false);
     }
   };

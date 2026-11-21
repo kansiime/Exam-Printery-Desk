@@ -22,6 +22,8 @@ from .models import (
 from .permissions import OWNER, PRINTER, SALES, STORE, role_of, roles
 from .services import Ledger, audit, weekly_schools
 from .tasks import send_visit_confirmation
+from . import notify as N
+from .models import Notification
 
 
 # ---------- health and photos ----------
@@ -112,6 +114,11 @@ class ExamViewSet(CreateListViewSet, mixins.UpdateModelMixin):
     queryset = Exam.objects.all()
     http_method_names = ["get", "post", "patch"]
 
+    def perform_create(self, serializer):
+        e = serializer.save(created_by=self.request.user)
+        N.tell_roles([PRINTER], f"New print order: {e.name}", f"Print {e.ordered_qty:,} copies ({e.pages} pages each). {e.note}".strip(),
+                     "/print", Notification.Level.ACTION)
+
 
 class PrintViewSet(CreateListViewSet):
     permission_classes = [roles(OWNER, PRINTER)]
@@ -120,12 +127,31 @@ class PrintViewSet(CreateListViewSet):
     def get_serializer_class(self):
         return S.PrintStartSerializer if self.action == "create" else S.PrintRunSerializer
 
+    def perform_create(self, serializer):
+        run = serializer.save(created_by=self.request.user)
+        N.tell_roles([OWNER], f"{self.request.user.display_name} started printing {run.exam.name}",
+                     f"Meter before: {run.meter_before:,} on {run.machine}.", "/owner/fraud", photos=[N.photo_url(run.photo_before)],
+                     exclude=self.request.user)
+
     @action(detail=True, methods=["post"])
     def finish(self, request, pk=None):
         run = self.get_object()
+        # With several printers, only the person who started a job (or the owner) may post it.
+        if run.created_by_id and run.created_by_id != request.user.id and role_of(request) != OWNER:
+            return Response({"detail": f"{run.created_by.display_name} started this job, so they must post it. Ask the owner if they can't."}, status=403)
         ser = S.PrintFinishSerializer(run, data=request.data)
         ser.is_valid(raise_exception=True)
         ser.save(done_at=timezone.now())
+        e = run.exam
+        expected = e.pages * run.qty + run.spoilt * e.sides
+        extra = run.meter_pages - expected
+        N.tell_roles([OWNER], f"{request.user.display_name} printed {run.qty:,} copies of {e.name}",
+                     f"Meter {run.meter_before:,} → {run.meter_after:,} = {run.meter_pages:,} pages. Expected {expected:,} "
+                     f"({run.qty:,} × {e.pages} + {run.spoilt} spoilt). " + (f"{extra:,} pages too many!" if extra > max(e.pages, 1) else "Meter matches."),
+                     "/owner/fraud", Notification.Level.URGENT if extra > max(e.pages, 1) else Notification.Level.INFO,
+                     photos=[N.photo_url(run.photo_before), N.photo_url(run.photo_after)], exclude=request.user)
+        N.tell_roles([STORE], f"{e.name} is printed", "Fold and count the copies, then confirm the count.", "/store", Notification.Level.ACTION)
+        N.check_findings()
         return Response(S.PrintRunSerializer(run, context={"request": request}).data)
 
 
@@ -134,11 +160,26 @@ class OtherPrintViewSet(CreateListViewSet):
     permission_classes = [roles(OWNER, PRINTER)]
     queryset = OtherPrint.objects.all()
 
+    def perform_create(self, serializer):
+        o = serializer.save(created_by=self.request.user)
+        N.tell_roles([OWNER], f"{self.request.user.display_name} recorded other printing", f"{o.description}: meter {o.meter_before:,} → {o.meter_after:,}.",
+                     "/print", photos=[N.photo_url(o.photo_before), N.photo_url(o.photo_after)], exclude=self.request.user)
+        N.check_findings()
+
 
 class ReceiptViewSet(CreateListViewSet):
     serializer_class = S.ReceiptSerializer
     permission_classes = [roles(OWNER, STORE)]
     queryset = StoreReceipt.objects.select_related("exam")
+
+    def perform_create(self, serializer):
+        r = serializer.save(created_by=self.request.user)
+        printed = PrintRun.objects.filter(exam=r.exam, done_at__isnull=False).order_by("-done_at").first()
+        differs = printed and printed.qty != r.qty
+        N.tell_roles([OWNER], f"{self.request.user.display_name} counted {r.qty:,} copies of {r.exam.name}",
+                     f"Printer posted {printed.qty:,}. " + ("The counts don't match!" if differs else "Counts match.") if printed else "",
+                     "/owner", Notification.Level.URGENT if differs else Notification.Level.INFO, exclude=self.request.user)
+        N.check_findings()
 
 
 class IssueViewSet(CreateListViewSet):
@@ -154,12 +195,20 @@ class IssueViewSet(CreateListViewSet):
             return [roles(SALES)()]
         return super().get_permissions()
 
+    def perform_create(self, serializer):
+        x = serializer.save(created_by=self.request.user)
+        N.tell([x.sales], f"{self.request.user.display_name} issued you {x.qty:,} copies of {x.exam.name}",
+               "Count them, then tap “I received” to accept.", "/field", Notification.Level.ACTION)
+        N.check_findings()
+
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
         issue = self.get_object()
         if not issue.accepted_at:
             issue.accepted_at = timezone.now()
             issue.save(update_fields=["accepted_at"])
+            if issue.created_by:
+                N.tell([issue.created_by], f"{request.user.display_name} accepted {issue.qty:,} copies of {issue.exam.name}", "", "/store")
         return Response(S.IssueSerializer(issue).data)
 
 
@@ -167,6 +216,11 @@ class ReturnViewSet(CreateListViewSet):
     serializer_class = S.ReturnSerializer
     permission_classes = [roles(OWNER, STORE)]
     queryset = Return.objects.select_related("exam", "sales")
+
+    def perform_create(self, serializer):
+        x = serializer.save(created_by=self.request.user)
+        N.tell([x.sales], f"{self.request.user.display_name} received {x.qty:,} copies of {x.exam.name} back from you", "", "/field")
+        N.check_findings()
 
 
 class SchoolViewSet(CreateListViewSet, mixins.UpdateModelMixin):
@@ -224,6 +278,15 @@ class VisitViewSet(CreateListViewSet):
     def perform_create(self, serializer):
         visit = serializer.save(created_by=self.request.user, sales=self.request.user)
         transaction.on_commit(lambda: send_visit_confirmation.delay(visit.id))
+        owes = visit.copies * visit.price - visit.paid
+        N.tell_roles([OWNER], f"{visit.sales.display_name} sold {visit.copies:,} copies to {visit.school.name}",
+                     f"{visit.exam.name}: paid UGX {visit.paid:,}" + (f", owes UGX {owes:,}" if owes > 0 else "") + f". Delivery note {visit.note_no}.",
+                     "/owner/fraud", photos=[N.photo_url(visit.note_photo)])
+        if visit.price_status == Visit.PriceStatus.PENDING:
+            N.tell_roles([OWNER], f"Discount needs your approval: {visit.school.name}",
+                         f"{visit.sales.display_name} sold at UGX {visit.price:,} instead of {visit.exam.price:,}. Reason: {visit.price_reason}",
+                         "/owner", Notification.Level.ACTION)
+        N.check_findings()
 
     def get_permissions(self):
         if self.action == "decide_price":
@@ -238,6 +301,9 @@ class VisitViewSet(CreateListViewSet):
             return Response({"detail": "Status must be approved or rejected."}, status=400)
         visit.price_status, visit.price_decided_by = decision, request.user
         visit.save(update_fields=["price_status", "price_decided_by"])
+        N.tell([visit.sales], f"Discount {'approved' if decision == Visit.PriceStatus.APPROVED else 'rejected'} for {visit.school.name}",
+               "" if decision == Visit.PriceStatus.APPROVED else f"Collect the school's debt at the set price of UGX {visit.exam.price:,} a copy.",
+               "/field", Notification.Level.INFO if decision == Visit.PriceStatus.APPROVED else Notification.Level.ACTION)
         return Response(self.get_serializer(visit).data)
 
 
@@ -254,7 +320,9 @@ class PaymentViewSet(CreateListViewSet):
         is_sales = role_of(self.request) == SALES
         if is_sales and visit.sales_id != self.request.user.id:
             raise serializers.ValidationError("You can only record payments for your own schools.")
-        serializer.save(created_by=self.request.user, sales=self.request.user if is_sales else None)
+        p = serializer.save(created_by=self.request.user, sales=self.request.user if is_sales else None)
+        N.tell_roles([OWNER], f"{p.visit.school.name} paid UGX {p.amount:,} of its debt", f"Recorded by {self.request.user.display_name}.", "/debts",
+                     exclude=self.request.user)
 
 
 class CashViewSet(CreateListViewSet):
@@ -264,6 +332,10 @@ class CashViewSet(CreateListViewSet):
     def get_queryset(self):
         qs = CashHandover.objects.select_related("sales", "created_by")
         return qs.filter(sales=self.request.user) if role_of(self.request) == SALES else qs
+
+    def perform_create(self, serializer):
+        c = serializer.save(created_by=self.request.user)
+        N.tell([c.sales], f"{self.request.user.display_name} recorded UGX {c.amount:,} cash from you", "If that's not what you handed over, tell the owner.", "/field")
 
 
 class HandoverViewSet(CreateListViewSet):
@@ -276,12 +348,19 @@ class HandoverViewSet(CreateListViewSet):
             return [roles(OWNER)()]
         return super().get_permissions()
 
+    def perform_create(self, serializer):
+        h = serializer.save(created_by=self.request.user)
+        N.tell_roles([OWNER], f"{self.request.user.display_name} says they handed you UGX {h.amount:,}",
+                     f"{h.method}{' · ' + h.ref if h.ref else ''}. Confirm once you have it.", "/cash", Notification.Level.ACTION)
+
     @action(detail=True, methods=["post"])
     def confirm(self, request, pk=None):
         h = self.get_object()
         if not h.confirmed_at:
             h.confirmed_at, h.confirmed_by = timezone.now(), request.user
             h.save(update_fields=["confirmed_at", "confirmed_by"])
+            if h.created_by:
+                N.tell([h.created_by], f"The owner confirmed receiving UGX {h.amount:,}", "", "/cash")
         return Response(self.get_serializer(h).data)
 
 
@@ -334,6 +413,10 @@ class CorrectionViewSet(CreateListViewSet):
         if self.action == "dismiss":
             return [roles(OWNER)()]
         return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        c = serializer.save(created_by=self.request.user)
+        N.tell_roles([OWNER], f"{self.request.user.display_name} reported a mistake", c.reason, "/owner", Notification.Level.ACTION, exclude=self.request.user)
 
     @action(detail=True, methods=["post"])
     def dismiss(self, request, pk=None):
@@ -497,8 +580,10 @@ def debts(request):
 @permission_classes([roles(OWNER, STORE)])
 def cash_summary(request):
     L = Ledger()
+    mine = role_of(request) == STORE
     return Response({
-        "store": L.store_cash(),
+        "store": L.store_cash(request.user.id if mine else None),
+        "keepers": [] if mine else L.store_keepers(),
         "sales": [{"id": u.id, "name": u.display_name, **{k: L.sales_stats(u.id)[k] for k in ("cash_collected", "handed", "cash_held")}}
                   for u in L.sales_people()],
     })
@@ -544,3 +629,26 @@ def sms_inbound(request):
                                    result=SchoolCheck.Result.MATCH if answer == "confirmed" else SchoolCheck.Result.MISMATCH,
                                    note=f"SMS reply: {text[:100]}")
     return Response({"ok": True, "matched": True})
+
+
+# ---------- in-app notifications ----------
+@api_view(["GET"])
+def notifications(request):
+    qs = Notification.objects.filter(recipient=request.user)
+    after = request.query_params.get("after")
+    items = list((qs.filter(id__gt=after) if after and after.isdigit() else qs)[:50])
+    return Response({
+        "unread": qs.filter(read_at__isnull=True).count(),
+        "items": [{"id": n.id, "level": n.level, "title": n.title, "body": n.body, "link": n.link, "photos": n.photos,
+                   "created_at": n.created_at, "read": bool(n.read_at)} for n in items],
+    })
+
+
+@api_view(["POST"])
+def notifications_read(request):
+    qs = Notification.objects.filter(recipient=request.user, read_at__isnull=True)
+    ids = request.data.get("ids")
+    if isinstance(ids, list):
+        qs = qs.filter(id__in=[i for i in ids if isinstance(i, int)])
+    qs.update(read_at=timezone.now())
+    return Response({"ok": True})
