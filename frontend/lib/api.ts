@@ -44,18 +44,31 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
     body = JSON.stringify(opts.body);
   }
   let res: Response;
-  try {
-    const [route, query] = path.split("?");
-    res = await fetch("/api/" + route.replace(/^\/+|\/+$/g, "") + "/" + (query ? "?" + query : ""), { method, headers, body, credentials: "same-origin" });
-  } catch {
-    throw new OfflineError("No connection. Check your network and try again.");
+  const [route, query] = path.split("?");
+  const url = "/api/" + route.replace(/^\/+|\/+$/g, "") + "/" + (query ? "?" + query : "");
+  // A sleeping or restarting server answers 502/503/504 for up to a minute. Reading data and
+  // signing in are safe to repeat, so wait and try again; saving a record is not retried
+  // (it could be saved twice), the person is asked to try again instead.
+  const safeToRepeat = method === "GET" || route.replace(/\/+$/, "") === "auth/login";
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch(url, { method, headers, body, credentials: "same-origin" });
+    } catch {
+      throw new OfflineError("No connection. Check your network and try again.");
+    }
+    if (![502, 503, 504].includes(res.status) || !safeToRepeat || attempt >= 5) break;
+    if (attempt === 0) window.dispatchEvent(new CustomEvent("printery:waking"));
+    await new Promise((r) => setTimeout(r, 4000 + attempt * 4000));
   }
+  window.dispatchEvent(new CustomEvent("printery:awake"));
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     if (res.status === 403 && data?.detail?.includes("CSRF")) throw new ApiError(403, "Your session expired. Reload the page.");
     let [msg, fields] = messageFrom(data);
     // Not a normal answer from the backend: show the code so the cause can be found.
-    if (!data || typeof data !== "object") msg = `The app could not reach the server (error ${res.status}). Try again in a minute; if it keeps happening, tell the owner.`;
+    if (!data || typeof data !== "object") msg = [502, 503, 504].includes(res.status)
+      ? "The server is starting up or restarting. Wait a minute and try again. Nothing was saved."
+      : `The app could not reach the server (error ${res.status}). Try again in a minute; if it keeps happening, tell the owner.`;
     throw new ApiError(res.status, res.status === 401 || res.status === 403 && !data ? "Please sign in again." : msg, fields);
   }
   return data as T;

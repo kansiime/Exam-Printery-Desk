@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { shrinkPhoto, when } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -10,6 +10,13 @@ import { Icon } from "./icons";
 const ToastCtx = createContext<(msg: string) => void>(() => {});
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [msg, setMsg] = useState("");
+  const [waking, setWaking] = useState(false);
+  useEffect(() => {
+    const on = () => setWaking(true), off = () => setWaking(false);
+    window.addEventListener("printery:waking", on);
+    window.addEventListener("printery:awake", off);
+    return () => { window.removeEventListener("printery:waking", on); window.removeEventListener("printery:awake", off); };
+  }, []);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const show = (m: string) => {
     setMsg(m);
@@ -20,6 +27,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastCtx.Provider value={show}>
       {children}
       <div className="toast" role="status" hidden={!msg}>{msg}</div>
+      {waking && <div className="waking" role="status">Starting the server, please wait… (up to a minute)</div>}
     </ToastCtx.Provider>
   );
 }

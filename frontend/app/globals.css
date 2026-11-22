@@ -343,3 +343,4 @@ a.ghostlink { display: inline-flex; align-items: center; min-height: 38px; paddi
 @keyframes rise { from { transform: translateY(20px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .moresheet { animation: none; } }
 @media (min-width: 900px) { .moresheet-backdrop { display: none; } }
+.waking { position: fixed; left: 0; right: 0; top: 0; z-index: 80; background: var(--accent); color: var(--accent-ink); text-align: center; font-size: .88rem; font-weight: 600; padding: calc(8px + env(safe-area-inset-top)) 16px 8px; }
