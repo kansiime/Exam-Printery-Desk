@@ -21,7 +21,8 @@ const LG: Record<string, string> = {
   "QR stickers": "Obupapula bwa QR",
   "My field work": "Omulimu gwange ebweru",
   "My account": "Akawunti yange",
-  "Home": "Awaka", "Checks": "Okukebera", "Print": "Kuba", "Field": "Ebweru",
+  "Home": "Awaka", "Checks": "Okukebera", "Print": "Kuba", "Field": "Ebweru", "More": "Ebirala",
+  "Change history": "Ebyakyusibwa", "History": "Ebyafaayo",
   // account menu
   "My account and password": "Akawunti n'ekigambo ky'ekyama",
   "Help guide": "Obuyambi",
@@ -73,7 +74,8 @@ const NYN: Record<string, string> = {
   "My field work": "Omurimo gwangye aheeru",
   "My account": "Akawunti yangye",
   "My schools that owe": "Amashomero gangye agarimu ebanja",
-  "Home": "Ahaka", "Checks": "Okushwijuma", "Print": "Capa", "Field": "Aheeru",
+  "Home": "Ahaka", "Checks": "Okushwijuma", "Print": "Capa", "Field": "Aheeru", "More": "Ebindi",
+  "Change history": "Ebihindwirwe", "History": "Ebyabaireho",
   // account menu
   "My account and password": "Akawunti n'ekigambo eky'ekyama",
   "Help guide": "Obuhwezi",

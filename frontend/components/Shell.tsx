@@ -39,7 +39,8 @@ const TABS: Record<Me["role"], Tab[]> = {
   ],
 };
 
-// Phones have room for five tabs; the owner's other screens sit in the account menu.
+// Phones have room for five tabs. With more screens than that, the fifth tab is "More",
+// which opens a panel with every other screen.
 const PHONE_TABS = 5;
 
 /** Page frame: side menu on computers, bottom tabs on phones, and only the screens this role may use. */
@@ -49,6 +50,8 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
   const { t } = useT();
   const guide = useFirstTimeGuide(me);
   const [feedback, setFeedback] = useState(false);
+  const [more, setMore] = useState(false);
+  useEffect(() => { setMore(false); }, [path]);
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -62,8 +65,10 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
   if (!me) return <div className="loading">Loading…</div>;
   const tabs = TABS[me.role];
   const current = tabs.find((t) => t.href === path) ?? (path === "/account" ? { label: "My account" } : undefined);
-  const phoneTabs = tabs.slice(0, PHONE_TABS);
-  const extra = tabs.slice(PHONE_TABS);
+  const crowded = tabs.length > PHONE_TABS;
+  const phoneTabs = crowded ? tabs.slice(0, PHONE_TABS - 1) : tabs;
+  const extra = crowded ? tabs.slice(PHONE_TABS - 1) : [];
+  const onExtra = extra.some((x) => x.href === path);
 
   return (
     <div className="app">
@@ -84,6 +89,25 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
 
       <main className="content">{children(me)}</main>
       <Guide me={me} open={guide.open} onClose={guide.close} />
+      {more && (
+        <div className="moresheet-backdrop" onClick={() => setMore(false)}>
+          <nav className="moresheet" aria-label={t("More")} onClick={(e) => e.stopPropagation()}>
+            <div className="grabber" />
+            <div className="moregrid">
+              {extra.map((tab) => (
+                <Link key={tab.href} href={tab.href} aria-current={path === tab.href ? "page" : undefined} onClick={() => setMore(false)}>
+                  <span className="mi"><Icon name={tab.icon} size={24} /></span><span>{t(tab.label)}</span>
+                </Link>
+              ))}
+            </div>
+            <div className="morelinks">
+              <Link href="/account" onClick={() => setMore(false)}><Icon name="user" />{t("My account and password")}</Link>
+              <button type="button" className="plain" onClick={() => { setMore(false); guide.show(); }}><Icon name="inbox" />{t("Help guide")}</button>
+              <button type="button" className="plain" onClick={() => { setMore(false); setFeedback(true); }}><Icon name="alert" />{t("Report a problem or idea")}</button>
+            </div>
+          </nav>
+        </div>
+      )}
       {feedback && <FeedbackDialog page={path} onClose={() => setFeedback(false)} />}
 
       {tabs.length > 1 && (
@@ -91,6 +115,11 @@ export function Shell({ allow, children }: { allow: Me["role"][]; children: (me:
           {phoneTabs.map((tab) => (
             <Link key={tab.href} href={tab.href} aria-current={path === tab.href ? "page" : undefined}><Icon name={tab.icon} /><span>{t(tab.short)}</span></Link>
           ))}
+          {crowded && (
+            <button type="button" className="moretab" aria-current={onExtra || more ? "page" : undefined} aria-expanded={more} onClick={() => setMore((m) => !m)}>
+              <Icon name="grid" /><span>{onExtra ? t(extra.find((x) => x.href === path)!.short) : t("More")}</span>
+            </button>
+          )}
         </nav>
       )}
     </div>
