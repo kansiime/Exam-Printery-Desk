@@ -138,16 +138,12 @@ def test_momo_statement_matching(api, team):
     assert any("recorded UGX 40,000 but your statement shows UGX 30,000" in f for f in findings(api))
 
 
-def test_discount_needs_owner_and_rejection_restores_price(api, team):
+def test_sales_cannot_change_the_price(api, team):
     exam = full_flow(api, team)
-    assert sell(api, exam, price=1500).status_code == 400  # no reason given
-    r = sell(api, exam, price=1500, price_reason="bulk order", paid=45000)
-    assert r.status_code == 201 and r.data["price_status"] == "pending"
-    assert api["sales"].post(f"/api/visits/{r.data['id']}/decide-price/", {"status": "approved"}).status_code == 403
-    post(api["owner"], f"/api/visits/{r.data['id']}/decide-price/", {"status": "rejected"})
-    debts = api["owner"].get("/api/summary/debts/").data
-    assert debts["total"] == 30 * 2000 - 45000
-
+    r = sell(api, exam, price=500, price_reason="my friend", paid=0)  # even a hand-made request with a lower price
+    assert r.status_code == 201 and r.data["price"] == 2000 and r.data["price_status"] == "ok"
+    assert api["owner"].get("/api/summary/debts/").data["total"] == 30 * 2000
+    assert api["owner"].get("/api/summary/overview/").data["pending_prices"] == []
 
 def test_cancel_keeps_history_and_removes_from_totals(api, team):
     exam = full_flow(api, team)

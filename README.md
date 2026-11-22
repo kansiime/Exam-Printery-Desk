@@ -25,7 +25,7 @@ Cash flow: **school → sales person → store keeper → owner (confirmed)**. M
 - **Schools:** each school with a phone number gets an SMS after every sale ("Reply 1 if correct, 2 if not"). Each week the owner also gets a list of schools to phone, and can report schools that have the exams but aren't in the records.
 - **Mobile money:** each recorded payment must appear on the owner's statement, pasted in or sent by the payment provider's webhook, with the same amount. A transaction ID can only be used once.
 - **Delivery notes:** numbers can't repeat, and every sale needs a photo of the signed note.
-- **Discounts:** sales below the set price wait for the owner. If the owner rejects one, the debt is worked out at the set price.
+- **Fixed prices:** the price per copy comes from the owner's print order. Sales people can't change it, on the phone or by any other means.
 - **Candidates vs copies:** schools buying far fewer copies than they have candidates are flagged.
 - **Nothing is deleted:** the owner cancels records with a reason, workers report mistakes, and every change is kept in history (Django admin → History).
 

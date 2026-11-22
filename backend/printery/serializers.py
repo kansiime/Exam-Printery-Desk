@@ -218,7 +218,8 @@ class VisitSerializer(serializers.ModelSerializer):
         fields = ["id", "client_id", "exam", "exam_name", "school", "school_name", "new_school", "sales", "sales_name",
                   "date", "copies", "price", "price_reason", "price_status", "paid", "method", "momo_id", "note_no",
                   "note_photo", "serials", "due", "notes", "latitude", "longitude", "confirmation", "debt", "created_at"]
-        read_only_fields = ["sales", "price_status", "confirmation"]
+        # The price always comes from the owner's set price for the exam; sales people can't change it.
+        read_only_fields = ["sales", "price", "price_reason", "price_status", "confirmation"]
         # client_id uniqueness is handled in the view, so a repeated send returns the saved visit.
         extra_kwargs = {"school": {"required": False}, "client_id": {"validators": []}}
 
@@ -249,8 +250,6 @@ class VisitSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"note_no": "That delivery note number is already used."})
         if not data.get("note_photo"):
             raise serializers.ValidationError({"note_photo": "Take a photo of the delivery note signed by the school."})
-        if data["price"] < exam.price and not data.get("price_reason", "").strip():
-            raise serializers.ValidationError({"price_reason": "Give a reason for the lower price. The owner must approve it."})
         return data
 
     @transaction.atomic
@@ -261,7 +260,8 @@ class VisitSerializer(serializers.ModelSerializer):
             data["school"] = existing or School.objects.create(created_by=self.context["request"].user, **new_school)
         data["momo_id"] = data.get("momo_id", "").strip().upper() if data.get("method") == Method.MOMO else ""
         data["note_no"] = data["note_no"].strip()
-        data["price_status"] = Visit.PriceStatus.PENDING if data["price"] < data["exam"].price else Visit.PriceStatus.OK
+        data["price"] = data["exam"].price
+        data["price_status"] = Visit.PriceStatus.OK
         school = data["school"]
         if data.get("latitude") is not None and school.latitude is None:
             # The first visit with GPS fixes where the school is; later visits are checked against it.

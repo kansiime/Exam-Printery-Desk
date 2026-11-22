@@ -43,8 +43,8 @@ const STEPS: Record<Me["role"], Step[]> = {
   sales: [
     { en: ["Accept your copies", "When the store issues you copies, count them and tap “I received”. If the number is wrong, tell the store keeper first."],
       lg: ["Kkiriza kopi zo", "Sitoowa bw'ekuwa kopi, zibale onyige “I received”. Omuwendo bwe guba omukyamu, sooka otegeeze omukuumi wa sitoowa."] },
-    { en: ["Record every school", "Choose the school, copies, price, money paid, delivery note number, and a photo of the signed note. Your location is saved too."],
-      lg: ["Wandiika buli ssomero", "Londa essomero, kopi, bbeeyi, ssente ezisasuddwa, ennamba ya delivery note, n'ekifaananyi kya note essiddwako omukono. N'ekifo kyo kiterekebwa."] },
+    { en: ["Record every school", "Choose the school, copies, money paid (the price is set by the owner), delivery note number, and a photo of the signed note. Your location is saved too."],
+      lg: ["Wandiika buli ssomero", "Londa essomero, kopi, ssente ezisasuddwa (bbeeyi eteekebwawo nannyini bizinensi), ennamba ya delivery note, n'ekifaananyi kya note essiddwako omukono. N'ekifo kyo kiterekebwa."] },
     { en: ["No network? Keep going", "Visits save on your phone and send by themselves when the network returns."],
       lg: ["Tewali network? Genda mu maaso", "Okukyalira kuterekebwa ku ssimu yo era kusindikibwa kwokka network bw'edda."] },
     { en: ["Close your day", "Each evening tap “Close my day” and type the copies and cash you really have. Hand cash and unsold copies to the store."],
@@ -75,7 +75,7 @@ const NYN: Record<Me["role"], [string, string][]> = {
   ],
   sales: [
     ["Yakira kopi zaawe", "Sitoo yaakuha kopi, zibare, okande “I received”. Omubaro gwaaba gutari gwo, banza ogambire omurinzi wa sitoo."],
-    ["Handiika buri ishomero", "Toorana eishomero, kopi, bbeeyi, sente ezishashuirwe, enamba ya delivery note, n'ekishushani kya note eteiretwaho omukono. N'ahu oriho nihabikwa."],
+    ["Handiika buri ishomero", "Toorana eishomero, kopi, sente ezishashuirwe (bbeeyi eteekwaho nyin'omurimo), enamba ya delivery note, n'ekishushani kya note eteiretwaho omukono. N'ahu oriho nihabikwa."],
     ["Tihariho network? Komeza", "Engyendo nizibikwa aha simu yaawe, zikeyohereza zonka network yagaruka."],
     ["Kinga eizooba ryawe", "Buri kyeggyezi kanda “Kinga eizooba ryangye” ohandiike kopi na sente ebi oine butoosha. Ha sitoo sente na kopi ezitaguzirwe."],
   ],

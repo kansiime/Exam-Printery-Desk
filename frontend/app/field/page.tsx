@@ -103,16 +103,13 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
   const [examId, setExamId] = useState<number | "">("");
   const [schoolId, setSchoolId] = useState("");
   const [copies, setCopies] = useState("");
-  const [price, setPrice] = useState("");
   const [paid, setPaid] = useState("0");
   const [method, setMethod] = useState("cash");
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [formKey, setFormKey] = useState(0);
   const exam = holding.find((h) => h.exam === examId) ?? holding[0];
-  useEffect(() => { if (exam && !price) setPrice(String(exam.price)); }, [exam, price]);
-  const total = Number(copies || 0) * Number(price || 0);
+  const total = Number(copies || 0) * (exam?.price ?? 0);
   const owes = total - Number(paid || 0);
-  const below = exam && Number(price) < exam.price;
 
   return (
     <section className="panel"><h3>Record a school visit</h3>
@@ -122,8 +119,8 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
         if (!exam) return;
         if (!photo) return run(async () => { throw new Error("Take a photo of the delivery note signed by the school."); });
         const values: Record<string, unknown> = {
-          exam: exam.exam, date: f.get("date"), copies, price, paid, method, momo_id: f.get("momo_id"),
-          note_no: f.get("note_no"), serials: f.get("serials"), due: f.get("due"), notes: f.get("notes"), price_reason: f.get("price_reason"),
+          exam: exam.exam, date: f.get("date"), copies, paid, method, momo_id: f.get("momo_id"),
+          note_no: f.get("note_no"), serials: f.get("serials"), due: f.get("due"), notes: f.get("notes"),
         };
         if (schoolId === "__new") {
           Object.assign(values, { "new_school.name": f.get("ns_name"), "new_school.district": f.get("ns_district"), "new_school.contact": f.get("ns_contact"),
@@ -138,7 +135,7 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
         if (ok) { setCopies(""); setPaid("0"); setPhoto(null); setSchoolId(""); setMethod("cash"); setFormKey((k) => k + 1); onSaved(how); }
       }}>
         <div className="grid2">
-          <label>Exam<select value={exam?.exam ?? ""} onChange={(e) => { setExamId(Number(e.target.value)); setPrice(String(holding.find((h) => h.exam === Number(e.target.value))?.price ?? "")); }} required>
+          <label>Exam<select value={exam?.exam ?? ""} onChange={(e) => setExamId(Number(e.target.value))} required>
             {holding.length ? holding.map((h) => <option key={h.exam} value={h.exam}>{h.name} ({fmt(h.qty)} with you)</option>) : <option value="">You hold no copies</option>}
           </select></label>
           <label>Date<input name="date" type="date" required defaultValue={today()} /></label>
@@ -164,7 +161,7 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
         )}
         <div className="grid3">
           <label>Copies sold<input type="number" min={1} inputMode="numeric" required value={copies} onChange={(e) => setCopies(e.target.value)} /></label>
-          <label>Price per copy (UGX)<input type="number" min={0} inputMode="numeric" required value={price} onChange={(e) => setPrice(e.target.value)} /></label>
+          <label>Price per copy (UGX)<input value={exam ? fmt(exam.price) : ""} readOnly aria-readonly="true" tabIndex={-1} style={{ background: "var(--surface)", color: "var(--muted)" }} /><span className="mini">Set by the owner</span></label>
           <label>Paid now (UGX)<input type="number" min={0} inputMode="numeric" required value={paid} onChange={(e) => setPaid(e.target.value)} /></label>
         </div>
         {exam?.numbered && <label>Serial numbers given to this school<input name="serials" required placeholder="e.g. 001-030" /></label>}
@@ -173,14 +170,12 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
           <label>Promised to pay by (if owing)<input name="due" type="date" /></label>
         </div>
         {method === "momo" && <label>Mobile money transaction ID<input name="momo_id" required placeholder="From the payment SMS" /></label>}
-        {below && <label>Reason for lower price<input name="price_reason" required placeholder="e.g. bought 200 copies" /></label>}
         <div className="grid2">
           <label>Delivery note number<input name="note_no" required placeholder="From the delivery note book" /></label>
           <PhotoInput id="note-photo" label="Photo of the delivery note signed by the school" value={photo} onChange={setPhoto} />
         </div>
         <label>Notes (optional)<textarea name="notes" placeholder="e.g. wants S.3 papers next term" /></label>
         <div className="calc">
-          {below && <div style={{ gridColumn: "1/-1", color: "var(--warn)" }}>Below the set price of {fmt(exam.price)}. The owner must approve this discount.</div>}
           <div>Total<b>{fmt(total)}</b></div><div>Paid<b>{fmt(Number(paid || 0))}</b></div>
           <div>Owes<b style={{ color: owes > 0 ? "var(--bad)" : "var(--good)" }}>{fmt(Math.max(owes, 0))}</b></div>
         </div>
