@@ -1,6 +1,7 @@
 "use client";
 import { Shell } from "@/components/Shell";
 import { DataTable, Disclosure, EmptyCard, ErrorNote, Feed, Findings, PageHead, Pill, Thumb, useAction } from "@/components/ui";
+import { ReceiptButton } from "@/components/Receipt";
 import { api } from "@/lib/api";
 import { fmt, ugx, when } from "@/lib/format";
 import { useData } from "@/lib/session";
@@ -80,6 +81,7 @@ function Fraud() {
             { label: "Sold by", cell: (v) => v.sales_name },
             { label: "Where", cell: (v) => v.latitude ? <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noopener">Map</a> : <span className="mini" style={{ color: "var(--bad)" }}>No location</span> },
             { label: "Photo", cell: (v) => <Thumb src={v.note_photo} /> },
+            { label: "Receipt", cell: (v) => <ReceiptButton kind="sale" id={v.id} /> },
           ]} />
       </section>
 

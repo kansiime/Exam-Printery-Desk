@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { ROLE_LABEL } from "@/lib/format";
 import { Me, useData } from "@/lib/session";
 
-type User = { id: number; username: string; first_name: string; last_name: string; name: string; role: string; phone: string; is_active: boolean; commission_percent: string };
+type User = { id: number; username: string; first_name: string; last_name: string; name: string; role: string; phone: string; is_active: boolean; commission_percent: string; locked_until: string | null };
 
 export default function TeamPage() {
   return <Shell allow={["owner"]}>{(me) => <Team me={me} />}</Shell>;
@@ -64,6 +64,10 @@ function Member({ user: u, onSaved }: { user: User; onSaved: () => void }) {
         <span className="avatar" aria-hidden="true">{initials.toUpperCase()}</span>
         <div className="t"><h3>{u.name}</h3><p className="sub">{ROLE_LABEL[u.role]} · username <b>{u.username}</b>{u.phone ? ` · ${u.phone}` : ""}{Number(u.commission_percent) ? ` · ${Number(u.commission_percent)}% commission` : ""}</p></div>
         {!u.is_active && <Pill cls="p-done">Switched off</Pill>}
+        {u.locked_until && new Date(u.locked_until) > new Date() && <>
+          <Pill cls="p-bad">Locked</Pill>
+          <button type="button" className="ghost" disabled={busy} onClick={() => run(() => api(`users/${u.id}/unlock`, { body: {} }), "Account unlocked").then(onSaved)}>Unlock</button>
+        </>}
         <button type="button" className="ghost" onClick={() => setEdit((x) => !x)}>{edit ? "Close" : "Edit"}</button>
       </div>
       {edit && <GiveResetCode userId={u.id} label="Create a password reset code" />}

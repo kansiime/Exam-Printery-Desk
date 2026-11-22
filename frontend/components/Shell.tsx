@@ -24,6 +24,7 @@ const TABS: Record<Me["role"], Tab[]> = {
     { href: "/owner/schools", label: "Schools", short: "Schools", icon: "school" },
     { href: "/owner/reports", label: "Reports", short: "Reports", icon: "chart" },
     { href: "/owner/team", label: "Team", short: "Team", icon: "users" },
+    { href: "/owner/history", label: "Change history", short: "History", icon: "clock" },
     { href: "/owner/qr", label: "QR stickers", short: "QR", icon: "qr" },
     { href: "/owner/pilot", label: "Pilot week", short: "Pilot", icon: "check" },
   ],

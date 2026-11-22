@@ -164,6 +164,8 @@ CELERY_BEAT_SCHEDULE = {
 
 # ---- Integrations ----
 BUSINESS_NAME = env("BUSINESS_NAME", "Exam Printery")
+BUSINESS_PHONE = env("BUSINESS_PHONE", "")  # shown on receipts
+BUSINESS_ADDRESS = env("BUSINESS_ADDRESS", "")
 SMS_PROVIDER = env("SMS_PROVIDER", "console")  # "console" or "africastalking"
 AT_USERNAME = env("AT_USERNAME", "sandbox")
 AT_API_KEY = env("AT_API_KEY", "")

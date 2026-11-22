@@ -30,20 +30,20 @@ export const listPending = () => tx<Pending[]>("readonly", (s) => s.getAll() as 
 const put = (p: Pending) => tx("readwrite", (s) => s.put(p));
 const remove = (id: string) => tx("readwrite", (s) => s.delete(id));
 
-async function send(p: Pending) {
-  await api("visits", { form: toForm({ ...p.values, client_id: p.client_id, note_photo: p.photo }) });
+async function send(p: Pending): Promise<number | undefined> {
+  const saved = await api<{ id?: number }>("visits", { form: toForm({ ...p.values, client_id: p.client_id, note_photo: p.photo }) });
+  return saved?.id;
 }
 
 /** Try to send now; if there is no network, keep it for later. Returns "sent" or "queued". */
-export async function submitVisit(values: Record<string, unknown>, photo: Blob): Promise<"sent" | "queued"> {
+export async function submitVisit(values: Record<string, unknown>, photo: Blob): Promise<{ how: "sent" | "queued"; id?: number }> {
   const p: Pending = { client_id: crypto.randomUUID(), values, photo, savedAt: new Date().toISOString() };
   try {
-    await send(p);
-    return "sent";
+    return { how: "sent", id: await send(p) };
   } catch (e) {
     if (e instanceof OfflineError) {
       await put(p);
-      return "queued";
+      return { how: "queued" };
     }
     throw e;
   }

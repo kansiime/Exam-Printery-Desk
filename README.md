@@ -167,6 +167,12 @@ On **Debts**, each school that owes has:
 
 Each reminder is sent once per stage and listed on the school's card ("Overdue reminder sent on WhatsApp ✓"). Meta charges a small fee per business-started conversation. Without these settings nothing is sent automatically and the buttons are used instead.
 
+## Receipts, account lock and change history
+
+- **Receipts:** every sale gets receipt S-000123 and every debt payment P-000045, a PDF with the business name, what was supplied, paid and still owed, and a check code. After saving a sale or payment the app offers **Send on WhatsApp** (a message with a link the school can open without signing in), **Open PDF** and **Copy message**; receipts can also be re-sent from the sales list and Debts. Set `BUSINESS_PHONE` and `BUSINESS_ADDRESS` on the backend to print them on receipts.
+- **Account lock:** 5 wrong passwords in a row lock an account for 15 minutes. The owner is alerted and can unlock it sooner on **Team**; resetting the password also unlocks it.
+- **Change history** (owner): every record created, changed or cancelled, by whom and when, with old → new values. Filter by person or kind of record.
+
 ## Pilot week
 
 **Pilot week** (owner) has a day-by-day checklist for running one real exam batch alongside your paper records, a **paper vs system** comparison for each exam (type your paper figures; differences show in red), and the team's problems and ideas.

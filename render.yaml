@@ -18,6 +18,10 @@ envVarGroups:
         value: "3.12.8"
       - key: BUSINESS_NAME
         sync: false            # your printery's name, shown in the app and in SMS to schools
+      - key: BUSINESS_PHONE
+        sync: false            # shown on receipts
+      - key: BUSINESS_ADDRESS
+        sync: false            # shown on receipts, e.g. "Mbarara"
       - key: SMS_PROVIDER
         value: console         # change to "africastalking" once AT_API_KEY is set
       - key: AT_USERNAME

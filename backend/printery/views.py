@@ -61,13 +61,42 @@ def csrf(request):
     return Response({"ok": True})
 
 
+MAX_WRONG_PASSWORDS = 5
+LOCK_MINUTES = 15
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes([LoginThrottle])
 def login_view(request):
-    user = authenticate(request, username=request.data.get("username", "").strip(), password=request.data.get("password", ""))
+    """Sign in. After 5 wrong passwords in a row the account is locked for 15 minutes (the owner can unlock it)."""
+    username = str(request.data.get("username", "")).strip()
+    account = User.objects.filter(username__iexact=username).first()
+    now = timezone.now()
+    if account and account.locked_until and account.locked_until > now:
+        mins = max(1, int((account.locked_until - now).total_seconds() // 60) + 1)
+        return Response({"detail": f"This account is locked after too many wrong passwords. Try again in {mins} minutes, or ask the owner to unlock it."}, status=400)
+    user = authenticate(request, username=account.username if account else username, password=request.data.get("password", ""))
     if not user:
+        if account:
+            account.failed_logins += 1
+            fields = ["failed_logins"]
+            if account.failed_logins >= MAX_WRONG_PASSWORDS:
+                account.locked_until, account.failed_logins = now + timezone.timedelta(minutes=LOCK_MINUTES), 0
+                fields.append("locked_until")
+                N.tell_roles([OWNER], f"{account.display_name}'s account was locked",
+                             f"{MAX_WRONG_PASSWORDS} wrong passwords in a row. It unlocks by itself in {LOCK_MINUTES} minutes, or unlock it on Team. "
+                             "If it wasn't them, someone may be guessing the password.", "/owner/team", Notification.Level.URGENT, exclude=account)
+            account.save(update_fields=fields)
+            left = MAX_WRONG_PASSWORDS - account.failed_logins
+            if account.locked_until and account.locked_until > now:
+                return Response({"detail": f"Too many wrong passwords. The account is locked for {LOCK_MINUTES} minutes."}, status=400)
+            if left <= 2:
+                return Response({"detail": f"Wrong username or password. {left} tr{'y' if left == 1 else 'ies'} left before the account locks."}, status=400)
         return Response({"detail": "Wrong username or password."}, status=400)
+    if user.failed_logins or user.locked_until:
+        user.failed_logins, user.locked_until = 0, None
+        user.save(update_fields=["failed_logins", "locked_until"])
     login(request, user)
     return Response(me_payload(user))
 
@@ -106,6 +135,13 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [roles(OWNER)]
     queryset = User.objects.order_by("role", "first_name")
     http_method_names = ["get", "post", "patch"]
+
+    @action(detail=True, methods=["post"])
+    def unlock(self, request, pk=None):
+        u = self.get_object()
+        u.failed_logins, u.locked_until = 0, None
+        u.save(update_fields=["failed_logins", "locked_until"])
+        return Response({"ok": True})
 
 
 class ExamViewSet(CreateListViewSet, mixins.UpdateModelMixin):

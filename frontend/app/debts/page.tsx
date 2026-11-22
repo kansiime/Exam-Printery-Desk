@@ -4,6 +4,7 @@ import { Shell } from "@/components/Shell";
 import { EmptyCard, ErrorNote, Kpi, PageHead, Pill, T, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmt, today, ugx, when } from "@/lib/format";
+import { ReceiptButton, ReceiptDialog } from "@/components/Receipt";
 import { useT } from "@/lib/i18n";
 import { Me, useData } from "@/lib/session";
 
@@ -49,6 +50,7 @@ function Debtor({ s, me, onChange }: { s: School; me: Me; onChange: () => void }
   const { t } = useT();
   const [noting, setNoting] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [receiptFor, setReceiptFor] = useState<number | null>(null);
   const wa = `https://wa.me/${s.wa_phone}?text=${encodeURIComponent(s.reminder_text)}`;
   return (
     <div className="ticket">
@@ -88,8 +90,9 @@ function Debtor({ s, me, onChange }: { s: School; me: Me; onChange: () => void }
         <form className="panel" style={{ background: "var(--surface-2)" }} onSubmit={async (e) => {
           e.preventDefault();
           const form = e.currentTarget, f = new FormData(form);
-          const ok = await run(() => api("payments", { body: { visit: Number(f.get("visit")), amount: Number(f.get("amount")), method: f.get("method"), momo_id: f.get("momo_id") || "" } }), "Payment recorded");
-          if (ok) { form.reset(); setPaying(false); onChange(); }
+          let id: number | undefined;
+          const ok = await run(async () => { id = (await api<{ id: number }>("payments", { body: { visit: Number(f.get("visit")), amount: Number(f.get("amount")), method: f.get("method"), momo_id: f.get("momo_id") || "" } })).id; }, "Payment recorded");
+          if (ok) { form.reset(); setPaying(false); if (id) setReceiptFor(id); onChange(); }
         }}>
           <div className="grid2">
             <label>Against<select name="visit">{s.visits.map((v) => <option key={v.id} value={v.id}>{v.exam} ({fmt(v.debt)})</option>)}</select></label>
@@ -101,10 +104,11 @@ function Debtor({ s, me, onChange }: { s: School; me: Me; onChange: () => void }
         </form>
       )}
 
+      {receiptFor && <ReceiptDialog kind="payment" id={receiptFor} onClose={() => setReceiptFor(null)} />}
       <ul className="feed">
         {s.visits.map((v) => (
           <li key={v.id}><time>{when(v.date)}</time><span className="grow">{v.exam}: {fmt(v.copies)} × {fmt(v.price)}, owes <b>{fmt(v.debt)}</b>
-            {me.role === "owner" && <><br /><span className="mini">Sold by {v.sales} · {v.age_days} days ago</span></>}</span></li>
+            {me.role === "owner" && <><br /><span className="mini">Sold by {v.sales} · {v.age_days} days ago</span></>}</span><span className="act"><ReceiptButton kind="sale" id={v.id} /></span></li>
         ))}
         {s.notes.map((n) => (
           <li key={"n" + n.id}><time>{when(n.created_at)}</time><span className="grow"><b>Note:</b> “{n.text}”

@@ -7,6 +7,7 @@ import { fmt, today, ugx, when } from "@/lib/format";
 import { discard, flush, listPending, submitVisit } from "@/lib/outbox";
 import { useData } from "@/lib/session";
 import { CloseMyDay } from "@/components/DayClose";
+import { ReceiptButton, ReceiptDialog } from "@/components/Receipt";
 
 type Holding = { exam: number; name: string; qty: number; price: number; numbered: boolean };
 type Issue = { id: number; exam_name: string; qty: number; created_at: string; by: string };
@@ -24,6 +25,7 @@ function FieldScreen() {
   const visits = useData<Visit[]>("visits");
   const toast = useToast();
   const { busy, run } = useAction();
+  const [receiptFor, setReceiptFor] = useState<number | null>(null);
   const [pending, setPending] = useState<Awaited<ReturnType<typeof listPending>>>([]);
   const reload = useCallback(() => { sum.reload(); schools.reload(); visits.reload(); }, [sum, schools, visits]);
 
@@ -84,26 +86,28 @@ function FieldScreen() {
       <CloseMyDay onDone={reload} />
 
       {s && !s.holding_by_exam.length ? <EmptyCard icon="box">You hold no copies right now. Ask the store keeper to issue some, then accept them here to start recording school visits.</EmptyCard> :
-      <VisitForm holding={s?.holding_by_exam ?? []} schools={schools.data ?? []} onSaved={(how) => { toast(how === "sent" ? "Visit saved" : "No network. Visit saved on your phone and will send later."); reload(); refreshOutbox(); }} />}
+      <VisitForm holding={s?.holding_by_exam ?? []} schools={schools.data ?? []} onSaved={(how, id) => { toast(how === "sent" ? "Visit saved" : "No network. Visit saved on your phone and will send later. Send the receipt once it has gone."); if (id) setReceiptFor(id); reload(); refreshOutbox(); }} />}
+      {receiptFor && <ReceiptDialog kind="sale" id={receiptFor} onClose={() => setReceiptFor(null)} />}
 
       <section className="panel"><h3>My recent visits</h3>
         <Feed empty="No visits recorded yet." items={(visits.data ?? []).slice(0, 15).map((v) => ({
           key: v.id, at: v.date,
           text: <><b>{v.school_name}</b> · {fmt(v.copies)} copies · paid {ugx(v.paid)}{v.debt > 0 && <> · <span style={{ color: "var(--bad)" }}>owes {ugx(v.debt)}</span></>}<br />
             <span className="mini">{v.exam_name}{v.price_status === "pending" ? " · discount waiting for owner" : v.price_status === "rejected" ? " · discount rejected, set price applies" : ""}{v.confirmation === "confirmed" ? " · school confirmed by SMS" : v.confirmation === "disputed" ? " · school disputed by SMS" : ""}</span></>,
-          act: <CancelOrReport type="visit" id={v.id} onDone={reload} />,
+          act: <><ReceiptButton kind="sale" id={v.id} /><CancelOrReport type="visit" id={v.id} onDone={reload} /></>,
         }))} />
       </section>
     </>
   );
 }
 
-function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools: School[]; onSaved: (how: "sent" | "queued") => void }) {
+function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools: School[]; onSaved: (how: "sent" | "queued", id?: number) => void }) {
   const { busy, run } = useAction();
   const [examId, setExamId] = useState<number | "">("");
   const [schoolId, setSchoolId] = useState("");
   const [copies, setCopies] = useState("");
   const [paid, setPaid] = useState("0");
+  const [paidTouched, setPaidTouched] = useState(false);
   const [method, setMethod] = useState("cash");
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -127,12 +131,15 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
             "new_school.phone": f.get("ns_phone"), "new_school.candidates": f.get("ns_candidates") || 0 });
         } else values.school = schoolId;
         let how: "sent" | "queued" = "sent";
+        let savedId: number | undefined;
         const ok = await run(async () => {
           const pos = await where();
           if (pos) { values.latitude = pos.lat; values.longitude = pos.lng; }
-          how = await submitVisit(values, photo);
+          const r = await submitVisit(values, photo);
+          how = r.how;
+          savedId = r.id;
         });
-        if (ok) { setCopies(""); setPaid("0"); setPhoto(null); setSchoolId(""); setMethod("cash"); setFormKey((k) => k + 1); onSaved(how); }
+        if (ok) { setCopies(""); setPaid("0"); setPaidTouched(false); setPhoto(null); setSchoolId(""); setMethod("cash"); setFormKey((k) => k + 1); onSaved(how, savedId); }
       }}>
         <div className="grid2">
           <label>Exam<select value={exam?.exam ?? ""} onChange={(e) => setExamId(Number(e.target.value))} required>
@@ -160,9 +167,12 @@ function VisitForm({ holding, schools, onSaved }: { holding: Holding[]; schools:
           </div>
         )}
         <div className="grid3">
-          <label>Copies sold<input type="number" min={1} inputMode="numeric" required value={copies} onChange={(e) => setCopies(e.target.value)} /></label>
+          <label>Copies sold<input type="number" min={1} inputMode="numeric" required value={copies} onChange={(e) => {
+            setCopies(e.target.value);
+            if (!paidTouched && exam) setPaid(String(Number(e.target.value || 0) * exam.price));
+          }} />{!!Number(copies) && exam && <span className="topay">Amount to pay: UGX {fmt(Number(copies) * exam.price)}</span>}</label>
           <label>Price per copy (UGX)<input value={exam ? fmt(exam.price) : ""} readOnly aria-readonly="true" tabIndex={-1} style={{ background: "var(--surface)", color: "var(--muted)" }} /><span className="mini">Set by the owner</span></label>
-          <label>Paid now (UGX)<input type="number" min={0} inputMode="numeric" required value={paid} onChange={(e) => setPaid(e.target.value)} /></label>
+          <label>Paid now (UGX)<input type="number" min={0} inputMode="numeric" required value={paid} onChange={(e) => { setPaid(e.target.value); setPaidTouched(true); }} /><span className="mini">Change it only if the school pays part</span></label>
         </div>
         {exam?.numbered && <label>Serial numbers given to this school<input name="serials" required placeholder="e.g. 001-030" /></label>}
         <div className="grid2">

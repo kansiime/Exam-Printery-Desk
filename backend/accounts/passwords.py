@@ -98,7 +98,8 @@ def reset(request):
         return Response({"new_password": problem}, status=400)
     with transaction.atomic():
         user.set_password(new_password)
-        user.save(update_fields=["password"])
+        user.failed_logins, user.locked_until = 0, None
+        user.save(update_fields=["password", "failed_logins", "locked_until"])
         entry.used_at = timezone.now()
         entry.save(update_fields=["used_at"])
     return Response({"detail": "Password changed. Sign in with your new password."})

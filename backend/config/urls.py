@@ -3,7 +3,7 @@ from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 
 from accounts import passwords
-from printery import extras, reports
+from printery import extras, history, receipts, reports
 from printery import views as v
 
 router = DefaultRouter()
@@ -51,6 +51,9 @@ api = [
     path("reports/", reports.report),
     path("reports/excel/", reports.report_excel),
     path("pilot/compare/", reports.pilot_compare),
+    path("history/", history.history),
+    path("receipts/<str:kind>/<int:obj_id>/", receipts.receipt_info),
+    path("r/<str:kind>/<int:obj_id>/<str:code>/", receipts.receipt_pdf),
     path("cancel/", v.cancel_record),
     path("cancelled/", v.cancelled_records),
     path("counts/", v.stock_counts),
